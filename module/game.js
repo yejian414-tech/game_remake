@@ -2,22 +2,24 @@ import Hero from './Hero.js';
 
 // --- 游戏配置 ---
 const config = {
-  hexSize: 35,      // 六边形大小
-  rows: 9,          // 地图行数
-  cols: 10,         // 地图列数
-  origin: { x: 70, y: 70 } // 绘图偏移量
+  hexSize: 35,
+  rows: 9,
+  cols: 10,
+  origin: { x: 70, y: 70 }
 };
 
 const canvas = document.getElementById('mapCanvas');
 const ctx = canvas.getContext('2d');
 
-// 初始化英雄
+// 初始化英雄实例
 const player = new Hero("探索者", 2, 2, { strength: 70, intelligence: 60 });
 let map = [];
 
-// --- 初始化函数 ---
+/**
+ * 游戏初始化
+ */
 function init() {
-  // 随机生成地图数据
+  // 随机生成地形数据
   for (let r = 0; r < config.rows; r++) {
     for (let q = 0; q < config.cols; q++) {
       let type = 'land';
@@ -28,7 +30,7 @@ function init() {
     }
   }
 
-  // 绑定结束回合按钮
+  // 绑定 UI 事件
   document.getElementById('btn-end-turn').addEventListener('click', () => {
     player.refresh();
     addLog("🔔 新的回合：步数已恢复。");
@@ -39,35 +41,9 @@ function init() {
   addLog("🌲 欢迎来到法鲁尔边界，点击相邻格子开始探索。");
 }
 
-// --- 核心数学工具 ---
-function getHexPos(q, r) {
-  const x = config.hexSize * Math.sqrt(3) * (q + r / 2) + config.origin.x;
-  const y = config.hexSize * 3 / 2 * r + config.origin.y;
-  return { x, y };
-}
-
-function pixelToHex(px, py) {
-  const x = px - config.origin.x;
-  const y = py - config.origin.y;
-  const q = (Math.sqrt(3) / 3 * x - 1 / 3 * y) / config.hexSize;
-  const r = (2 / 3 * y) / config.hexSize;
-  return axialRound(q, r);
-}
-
-function axialRound(q, r) {
-  let x = q, z = r, y = -x - z;
-  let rx = Math.round(x), ry = Math.round(y), rz = Math.round(z);
-  if (Math.abs(rx - x) > Math.abs(ry - y) && Math.abs(rx - x) > Math.abs(rz - z)) rx = -ry - rz;
-  else if (Math.abs(ry - y) > Math.abs(rz - z)) ry = -rx - rz;
-  else rz = -rx - ry;
-  return { q: rx, r: rz };
-}
-
-function getDistance(a, b) {
-  return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
-}
-
-// --- 渲染逻辑 ---
+/**
+ * 渲染逻辑
+ */
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -100,14 +76,17 @@ function render() {
   updateUI();
 }
 
-// --- 交互处理 ---
+/**
+ * 交互：点击地图移动
+ */
 canvas.addEventListener('mousedown', (e) => {
   const rect = canvas.getBoundingClientRect();
   const target = pixelToHex(e.clientX - rect.left, e.clientY - rect.top);
   const hex = map.find(h => h.q === target.q && h.r === target.r);
 
+  // 检查目标是否存在且是否相邻（距离为1）
   if (hex && getDistance(player, target) === 1) {
-    if (hex.type === 'water') return addLog("🚫 无法游过深去。");
+    if (hex.type === 'water') return addLog("🚫 无法通过深水区域。");
 
     if (player.moveTo(target.q, target.r)) {
       if (Math.random() > 0.8) handleRandomEvent();
@@ -119,15 +98,45 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 function handleRandomEvent() {
-  addLog("🎲 遭遇突发挑战，正在判定力量...");
+  addLog("🎲 遭遇挑战，正在判定力量...");
   const successes = player.rollCheck('strength', 3);
 
   if (successes >= 2) {
-    addLog(`✅ 判定通过 (${successes}/3)！你感到力量涌现。`, "log-success");
+    addLog(`✅ 判定通过 (${successes}/3)！你感觉充满力量。`, "log-success");
   } else {
     player.takeDamage(15);
-    addLog(`💥 判定失败 (${successes}/3)！你受伤了，HP -15`, "log-fail");
+    addLog(`💥 判定失败 (${successes}/3)！HP -15`, "log-fail");
   }
+}
+
+// --- 核心数学工具函数 (解决你的 ReferenceError) ---
+
+function getHexPos(q, r) {
+  const x = config.hexSize * Math.sqrt(3) * (q + r / 2) + config.origin.x;
+  const y = config.hexSize * 3 / 2 * r + config.origin.y;
+  return { x, y };
+}
+
+function pixelToHex(px, py) {
+  const x = px - config.origin.x;
+  const y = py - config.origin.y;
+  const q = (Math.sqrt(3) / 3 * x - 1 / 3 * y) / config.hexSize;
+  const r = (2 / 3 * y) / config.hexSize;
+  return axialRound(q, r);
+}
+
+function axialRound(q, r) {
+  let x = q, z = r, y = -x - z;
+  let rx = Math.round(x), ry = Math.round(y), rz = Math.round(z);
+  const xDiff = Math.abs(rx - x), yDiff = Math.abs(ry - y), zDiff = Math.abs(rz - z);
+  if (xDiff > yDiff && xDiff > zDiff) rx = -ry - rz;
+  else if (yDiff > zDiff) ry = -rx - rz;
+  else rz = -rx - ry;
+  return { q: rx, r: rz };
+}
+
+function getDistance(a, b) {
+  return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
 }
 
 function addLog(msg, className = "") {
@@ -143,5 +152,5 @@ function updateUI() {
   document.getElementById('moves-val').innerText = player.moves;
 }
 
-// 启动程序
+// 启动游戏
 init();
