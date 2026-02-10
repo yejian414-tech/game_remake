@@ -1,4 +1,6 @@
-
+/**
+ * Hero 类：根据职业 Key 自动加载属性
+ */
 export default class Hero {
   #name;
   #className;
@@ -11,36 +13,40 @@ export default class Hero {
   #speed;
   #luck;
 
-  constructor(q, r, config) {
+  constructor(q, r, classKey, configData) {
     this.q = q;
     this.r = r;
 
-    // 从传入的配置对象中解构
-    this.#name = "探索者"; // 或者从 UI 输入获取
-    this.#className = config.className;
+    // 根据 classKey 获取对应数据，如果没有找到则默认取 warrior
+    const charData = configData[classKey] || configData["warrior"];
+    const stats = charData.stats;
 
-    // 基础数值
+    this.#name = "探索者"; // 也可以改为从参数传入
+    this.#className = charData.className;
+
+    // 初始化基础数值
     this.#maxHp = 100;
     this.#hp = 100;
 
-    // 映射 JSON 中的 stats
-    const { strength, intelligence, speed, luck } = config.stats;
-    this.#strength = strength || 50;
-    this.#intelligence = intelligence || 50;
-    this.#speed = speed || 4;
-    this.#luck = luck || 10;
+    // 从 JSON stats 中提取属性
+    this.#strength = stats.strength;
+    this.#intelligence = stats.intelligence;
+    this.#speed = stats.speed;
+    this.#luck = stats.luck;
 
-    // 行动点数通常可以与速度挂钩，例如：maxMoves = speed
-    this.#maxMoves = this.#speed;
+    // 将移动步数与速度挂钩
+    this.#maxMoves = stats.speed;
     this.#moves = this.#maxMoves;
   }
 
-  // Getter 访问器
+  // Getter 保持不变...
   get name() { return this.#name; }
   get className() { return this.#className; }
   get hp() { return this.#hp; }
   get moves() { return this.#moves; }
-  get speed() { return this.#speed; }
+
+
+
 
 
   // --- 内部逻辑方法 ---

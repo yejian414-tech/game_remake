@@ -25,7 +25,6 @@ async function startGame(classKey) {
     const presets = await response.json();
 
     // 2. 初始化英雄：坐标(2,2)，并根据 classKey 从 JSON 中提取属性
-    // 注意：构造函数参数需对应：q, r, classKey, configData
     player = new Hero(2, 2, classKey, presets);
 
     // 3. 生成地图并绑定事件
