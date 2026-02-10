@@ -1,33 +1,70 @@
 import Hero from './Hero.js';
-// game.js
+
+// --- 游戏配置 ---
 const config = {
-  hexSize: 35,
-  rows: 9,
-  cols: 10,
-  origin: { x: 70, y: 70 }
+  hexSize: 35,      // 六边形大小
+  rows: 9,          // 地图行数
+  cols: 10,         // 地图列数
+  origin: { x: 70, y: 70 } // 绘图偏移量
 };
 
 const canvas = document.getElementById('mapCanvas');
 const ctx = canvas.getContext('2d');
 
-// 1. 初始化英雄实例 (从 Hero 类创建)
+// 初始化英雄
 const player = new Hero("探索者", 2, 2, { strength: 70, intelligence: 60 });
-
 let map = [];
 
+// --- 初始化函数 ---
 function init() {
+  // 随机生成地图数据
   for (let r = 0; r < config.rows; r++) {
     for (let q = 0; q < config.cols; q++) {
-      let type = Math.random() < 0.2 ? 'forest' : (Math.random() < 0.1 ? 'water' : 'land');
+      let type = 'land';
+      const rand = Math.random();
+      if (rand < 0.15) type = 'water';
+      else if (rand < 0.3) type = 'forest';
       map.push({ q, r, type });
     }
   }
-  document.getElementById('btn-end-turn').onclick = () => {
+
+  // 绑定结束回合按钮
+  document.getElementById('btn-end-turn').addEventListener('click', () => {
     player.refresh();
     addLog("🔔 新的回合：步数已恢复。");
     render();
-  };
+  });
+
   render();
+  addLog("🌲 欢迎来到法鲁尔边界，点击相邻格子开始探索。");
+}
+
+// --- 核心数学工具 ---
+function getHexPos(q, r) {
+  const x = config.hexSize * Math.sqrt(3) * (q + r / 2) + config.origin.x;
+  const y = config.hexSize * 3 / 2 * r + config.origin.y;
+  return { x, y };
+}
+
+function pixelToHex(px, py) {
+  const x = px - config.origin.x;
+  const y = py - config.origin.y;
+  const q = (Math.sqrt(3) / 3 * x - 1 / 3 * y) / config.hexSize;
+  const r = (2 / 3 * y) / config.hexSize;
+  return axialRound(q, r);
+}
+
+function axialRound(q, r) {
+  let x = q, z = r, y = -x - z;
+  let rx = Math.round(x), ry = Math.round(y), rz = Math.round(z);
+  if (Math.abs(rx - x) > Math.abs(ry - y) && Math.abs(rx - x) > Math.abs(rz - z)) rx = -ry - rz;
+  else if (Math.abs(ry - y) > Math.abs(rz - z)) ry = -rx - rz;
+  else rz = -rx - ry;
+  return { q: rx, r: rz };
+}
+
+function getDistance(a, b) {
+  return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
 }
 
 // --- 渲染逻辑 ---
@@ -38,66 +75,73 @@ function render() {
     const { x, y } = getHexPos(hex.q, hex.r);
     const isPlayerHere = (player.q === hex.q && player.r === hex.r);
 
-    drawHexagon(x, y, hex.type, isPlayerHere);
+    // 绘制六边形
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 180) * (60 * i - 30);
+      ctx.lineTo(x + (config.hexSize - 3) * Math.cos(angle), y + (config.hexSize - 3) * Math.sin(angle));
+    }
+    ctx.closePath();
 
-    if (isPlayerHere) drawPlayerLabel(x, y);
+    const colors = { land: '#2ecc71', water: '#3498db', forest: '#1b4d3e' };
+    ctx.fillStyle = isPlayerHere ? '#f1c40f' : colors[hex.type];
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.stroke();
+
+    if (isPlayerHere) {
+      ctx.fillStyle = "black";
+      ctx.font = "bold 10px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(player.name, x, y + 5);
+    }
   });
 
   updateUI();
 }
 
-function drawHexagon(x, y, type, highlight) {
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const angle = (Math.PI / 180) * (60 * i - 30);
-    ctx.lineTo(x + (config.hexSize - 3) * Math.cos(angle), y + (config.hexSize - 3) * Math.sin(angle));
-  }
-  ctx.closePath();
-
-  const colors = { land: '#2ecc71', water: '#3498db', forest: '#1b4d3e' };
-  ctx.fillStyle = highlight ? '#f1c40f' : colors[type];
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-  ctx.stroke();
-}
-
-function drawPlayerLabel(x, y) {
-  ctx.fillStyle = "black";
-  ctx.font = "bold 10px Arial";
-  ctx.textAlign = "center";
-  ctx.fillText(player.name, x, y + 5);
-}
-
-// --- 点击处理 ---
+// --- 交互处理 ---
 canvas.addEventListener('mousedown', (e) => {
   const rect = canvas.getBoundingClientRect();
   const target = pixelToHex(e.clientX - rect.left, e.clientY - rect.top);
   const hex = map.find(h => h.q === target.q && h.r === target.r);
 
   if (hex && getDistance(player, target) === 1) {
-    if (hex.type === 'water') return addLog("🚫 无法游过深水。");
+    if (hex.type === 'water') return addLog("🚫 无法游过深去。");
 
-    // 调用 Hero 类的方法
     if (player.moveTo(target.q, target.r)) {
       if (Math.random() > 0.8) handleRandomEvent();
       render();
     } else {
-      addLog("❌ 体力不足！");
+      addLog("❌ 体力不足，请结束回合！");
     }
   }
 });
 
 function handleRandomEvent() {
-  addLog("🎲 遭遇力量判定...");
+  addLog("🎲 遭遇突发挑战，正在判定力量...");
   const successes = player.rollCheck('strength', 3);
 
   if (successes >= 2) {
-    addLog(`✅ 判定通过 (${successes}/3)！你感觉良好。`, "log-success");
+    addLog(`✅ 判定通过 (${successes}/3)！你感到力量涌现。`, "log-success");
   } else {
     player.takeDamage(15);
-    addLog(`💥 判定失败 (${successes}/3)！HP -15`, "log-fail");
+    addLog(`💥 判定失败 (${successes}/3)！你受伤了，HP -15`, "log-fail");
   }
 }
 
-// (其余数学工具函数 getHexPos, pixelToHex, axialRound, getDistance, addLog, updateUI 与之前一致)
-// ... [为了简洁，此处省略重复的数学工具代码]
+function addLog(msg, className = "") {
+  const logBox = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${className}`;
+  entry.innerText = `> ${msg}`;
+  logBox.prepend(entry);
+}
+
+function updateUI() {
+  document.getElementById('hp-val').innerText = player.hp;
+  document.getElementById('moves-val').innerText = player.moves;
+}
+
+// 启动程序
+init();
