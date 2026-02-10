@@ -1,9 +1,7 @@
-/**
- * Hero 类：所有核心数值均已私有化 (#)
- */
+
 export default class Hero {
-  // 定义私有字段
   #name;
+  #className;
   #hp;
   #maxHp;
   #moves;
@@ -11,26 +9,39 @@ export default class Hero {
   #strength;
   #intelligence;
   #speed;
+  #luck;
 
-  constructor(q, r, stats) {
-    this.q = q; // 坐标通常保持公开，方便地图计算
+  constructor(q, r, config) {
+    this.q = q;
     this.r = r;
 
+    // 从传入的配置对象中解构
+    this.#name = "探索者"; // 或者从 UI 输入获取
+    this.#className = config.className;
+
+    // 基础数值
     this.#maxHp = 100;
     this.#hp = 100;
-    this.#strength = stats.strength || 70;
-    this.#intelligence = stats.intelligence || 60;
 
-    this.#maxMoves = 5;
-    this.#moves = 5;
+    // 映射 JSON 中的 stats
+    const { strength, intelligence, speed, luck } = config.stats;
+    this.#strength = strength || 50;
+    this.#intelligence = intelligence || 50;
+    this.#speed = speed || 4;
+    this.#luck = luck || 10;
+
+    // 行动点数通常可以与速度挂钩，例如：maxMoves = speed
+    this.#maxMoves = this.#speed;
+    this.#moves = this.#maxMoves;
   }
 
-  // --- Getter (只读访问器) ---
-  // 外部代码可以通过 player.hp 读取值，但不能 player.hp = 999
+  // Getter 访问器
   get name() { return this.#name; }
+  get className() { return this.#className; }
   get hp() { return this.#hp; }
   get moves() { return this.#moves; }
-  get strength() { return this.#strength; }
+  get speed() { return this.#speed; }
+
 
   // --- 内部逻辑方法 ---
 

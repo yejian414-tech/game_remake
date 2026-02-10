@@ -11,15 +11,41 @@ const config = {
 const canvas = document.getElementById('mapCanvas');
 const ctx = canvas.getContext('2d');
 
-// 初始化英雄实例
-const player = new Hero("探索者", 2, 2, { strength: 70, intelligence: 60 });
+let player;
 let map = [];
 
 /**
- * 游戏初始化
+ * 游戏启动入口：异步加载配置并初始化
+ * @param {string} classKey - 职业名称 (如 'warrior', 'mage', 'scout')
  */
-function init() {
-  // 随机生成地形数据
+async function startGame(classKey) {
+  try {
+    // 1. 获取职业预设数据
+    const response = await fetch('./preset.json');
+    const presets = await response.json();
+
+    // 2. 初始化英雄：坐标(2,2)，并根据 classKey 从 JSON 中提取属性
+    // 注意：构造函数参数需对应：q, r, classKey, configData
+    player = new Hero(2, 2, classKey, presets);
+
+    // 3. 生成地图并绑定事件
+    initMap();
+    bindEvents();
+
+    // 4. 初次渲染
+    render();
+    addLog(`🌲 欢迎来到法鲁尔边界，当前职业：${player.className}`);
+  } catch (error) {
+    console.error("初始化失败:", error);
+    addLog("❌ 无法加载职业配置，请检查 preset.json 文件。", "log-fail");
+  }
+}
+
+/**
+ * 初始化地图地形
+ */
+function initMap() {
+  map = [];
   for (let r = 0; r < config.rows; r++) {
     for (let q = 0; q < config.cols; q++) {
       let type = 'land';
@@ -29,26 +55,48 @@ function init() {
       map.push({ q, r, type });
     }
   }
+}
 
-  // 绑定 UI 事件
+/**
+ * 绑定 UI 和 鼠标事件
+ */
+function bindEvents() {
+  // 结束回合
   document.getElementById('btn-end-turn').addEventListener('click', () => {
     player.refresh();
     addLog("🔔 新的回合：步数已恢复。");
     render();
   });
 
-  render();
-  addLog("🌲 欢迎来到法鲁尔边界，点击相邻格子开始探索。");
+  // 点击移动
+  canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const target = pixelToHex(e.clientX - rect.left, e.clientY - rect.top);
+    const hex = map.find(h => h.q === target.q && h.r === target.r);
+
+    // 检查目标是否存在且是否相邻（距离为1）
+    if (hex && getDistance(player, target) === 1) {
+      if (hex.type === 'water') return addLog("🚫 无法通过深水区域。");
+
+      if (player.moveTo(target.q, target.r)) {
+        if (Math.random() > 0.8) handleRandomEvent();
+        render();
+      } else {
+        addLog("❌ 体力不足，请结束回合！");
+      }
+    }
+  });
 }
 
 /**
- * 渲染逻辑
+ * 渲染主循环
  */
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   map.forEach(hex => {
     const { x, y } = getHexPos(hex.q, hex.r);
+    // 对比玩家坐标和格子坐标
     const isPlayerHere = (player.q === hex.q && player.r === hex.r);
 
     // 绘制六边形
@@ -65,6 +113,7 @@ function render() {
     ctx.strokeStyle = 'rgba(0,0,0,0.1)';
     ctx.stroke();
 
+    // 如果英雄在此格，绘制文字
     if (isPlayerHere) {
       ctx.fillStyle = "black";
       ctx.font = "bold 10px Arial";
@@ -77,26 +126,8 @@ function render() {
 }
 
 /**
- * 交互：点击地图移动
+ * 随机遭遇事件
  */
-canvas.addEventListener('mousedown', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const target = pixelToHex(e.clientX - rect.left, e.clientY - rect.top);
-  const hex = map.find(h => h.q === target.q && h.r === target.r);
-
-  // 检查目标是否存在且是否相邻（距离为1）
-  if (hex && getDistance(player, target) === 1) {
-    if (hex.type === 'water') return addLog("🚫 无法通过深水区域。");
-
-    if (player.moveTo(target.q, target.r)) {
-      if (Math.random() > 0.8) handleRandomEvent();
-      render();
-    } else {
-      addLog("❌ 体力不足，请结束回合！");
-    }
-  }
-});
-
 function handleRandomEvent() {
   addLog("🎲 遭遇挑战，正在判定力量...");
   const successes = player.rollCheck('strength', 3);
@@ -109,7 +140,7 @@ function handleRandomEvent() {
   }
 }
 
-// --- 核心数学工具函数 (解决你的 ReferenceError) ---
+// --- 核心数学工具函数 ---
 
 function getHexPos(q, r) {
   const x = config.hexSize * Math.sqrt(3) * (q + r / 2) + config.origin.x;
@@ -152,5 +183,6 @@ function updateUI() {
   document.getElementById('moves-val').innerText = player.moves;
 }
 
-// 启动游戏
-init();
+// --- 启动执行 ---
+// 你可以通过更改这里的参数来测试不同职业：'warrior', 'mage', 'scout'
+startGame('warrior');
