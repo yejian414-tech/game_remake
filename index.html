@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>For The King JS Demo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div id="game-wrapper">
+    <canvas id="mapCanvas" width="700" height="600"></canvas>
+
+    <div id="ui-side">
+      <header>
+        <h2>探索模式</h2>
+        <div class="status-bar">
+          <span>❤️ HP: <b id="hp-val">100</b></span>
+          <span>⚡ 步数: <b id="moves-val">5</b></span>
+        </div>
+      </header>
+
+      <div id="log-container">
+        <div id="log"></div>
+      </div>
+
+      <button id="btn-end-turn">结束回合</button>
+
+      <div class="legend">
+        <p><span class="dot land"></span> 平原</p>
+        <p><span class="dot forest"></span> 森林</p>
+        <p><span class="dot water"></span> 水域</p>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./module/game.js"></script>
+</body>
+
+</html>
