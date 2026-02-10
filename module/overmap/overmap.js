@@ -21,7 +21,7 @@ let map = [];
 async function startGame(classKey) {
   try {
     // 1. 获取职业预设数据
-    const response = await fetch('./preset.json');
+    const response = await fetch('../hero/preset.json');
     const presets = await response.json();
 
     // 2. 初始化英雄：坐标(2,2)，并根据 classKey 从 JSON 中提取属性
