@@ -1,4 +1,4 @@
-import Hero from './Hero.js';
+import Hero from '../hero/Hero.js';
 
 // --- 游戏配置 ---
 const config = {
