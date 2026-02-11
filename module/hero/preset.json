@@ -1,8 +1,10 @@
 {
   "warrior": {
     "className": "战士",
+    "Name": "战士",
     "description": "拥有极高的力量，擅长近战格斗。",
     "stats": {
+      "maxHp": 100,
       "strength": 80,
       "intelligence": 30,
       "speed": 4,
@@ -11,8 +13,10 @@
   },
   "mage": {
     "className": "法师",
+    "Name": "法师",
     "description": "智力超群，但身体虚弱，行动较快。",
     "stats": {
+      "maxHp": 100,
       "strength": 20,
       "intelligence": 90,
       "speed": 5,
@@ -21,8 +25,10 @@
   },
   "scout": {
     "className": "游侠",
+    "Name": "游侠",
     "description": "全能型角色，移动速度极快。",
     "stats": {
+      "maxHp": 100,
       "strength": 50,
       "intelligence": 50,
       "speed": 7,

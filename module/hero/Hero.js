@@ -1,6 +1,4 @@
-/**
- * Hero 类：根据职业 Key 自动加载属性
- */
+
 export default class Hero {
   #name;
   #className;
@@ -17,25 +15,23 @@ export default class Hero {
     this.q = q;
     this.r = r;
 
-    // 根据 classKey 获取对应数据，如果没有找到则默认取 warrior
-    const charData = configData[classKey] || configData["warrior"];
-    const stats = charData.stats;
+    // 根据 classKey 获取对应数据
+    const charData = configData[classKey];
 
-    this.#name = "探索者"; // 也可以改为从参数传入
+    this.#name = charData.Name;
     this.#className = charData.className;
 
-    // 初始化基础数值
-    this.#maxHp = 100;
+    // 从 JSON charData.stats 中提取属性
+    this.#maxHp = charData.stats.maxHp;
+    this.#strength = charData.stats.strength;
+    this.#intelligence = charData.stats.intelligence;
+    this.#speed = charData.stats.speed;
+    this.#luck = charData.stats.luck;
+
     this.#hp = 100;
 
-    // 从 JSON stats 中提取属性
-    this.#strength = stats.strength;
-    this.#intelligence = stats.intelligence;
-    this.#speed = stats.speed;
-    this.#luck = stats.luck;
-
     // 将移动步数与速度挂钩
-    this.#maxMoves = stats.speed;
+    this.#maxMoves = charData.stats.speed;
     this.#moves = this.#maxMoves;
   }
 
