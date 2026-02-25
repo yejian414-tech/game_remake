@@ -1,40 +1,294 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>For The King JS Demo</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hex Game</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1a1a2e;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    #game-canvas {
+      display: block;
+      cursor: grab;
+    }
+
+    #game-canvas:active {
+      cursor: grabbing;
+    }
+
+    /* ── 通用全屏遮罩 ── */
+    .fullscreen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      /* 默认隐藏，JS 切换 */
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      background: rgba(10, 10, 30, 0.96);
+      z-index: 50;
+    }
+
+    .screen-title {
+      font-size: 26px;
+      font-weight: bold;
+      color: #f39c12;
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+
+    .screen-sub {
+      font-size: 14px;
+      color: #aaa;
+      margin-bottom: 32px;
+    }
+
+    /* ── 选角界面 ── */
+    #char-select-screen {
+      gap: 0;
+    }
+
+    #hero-slots {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    .hero-card {
+      width: 140px;
+      background: #2c2c54;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px 16px;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.2s, transform 0.15s;
+      user-select: none;
+    }
+
+    .hero-card:hover {
+      border-color: rgba(255, 255, 255, 0.35);
+      transform: translateY(-3px);
+    }
+
+    .hero-card.selected {
+      border-color: #f39c12;
+      background: #3d3468;
+    }
+
+    .hero-name {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .hero-hp {
+      font-size: 13px;
+      color: #e74c3c;
+      margin-bottom: 8px;
+    }
+
+    .hero-desc {
+      font-size: 12px;
+      color: #bbb;
+      line-height: 1.4;
+    }
+
+    #char-selected-info {
+      font-size: 14px;
+      color: #ccc;
+      margin-bottom: 20px;
+      min-height: 20px;
+    }
+
+    #char-confirm-btn {
+      background: #e67e22;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 36px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    #char-confirm-btn:hover:not(:disabled) {
+      background: #cf6d17;
+    }
+
+    #char-confirm-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ── 地图生成过渡 ── */
+    #map-gen-screen {
+      gap: 16px;
+    }
+
+    #map-gen-info {
+      font-size: 16px;
+      color: #ccc;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255, 255, 255, 0.15);
+      border-top-color: #f39c12;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ── HUD ── */
+    #hud {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      /* showMapUI() 时才显示 */
+      align-items: center;
+      gap: 16px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 10px 24px;
+      user-select: none;
+      z-index: 10;
+    }
+
+    #movement-points {
+      font-size: 15px;
+      min-width: 80px;
+    }
+
+    #end-turn-btn {
+      background: #e67e22;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #end-turn-btn:hover {
+      background: #cf6d17;
+    }
+
+    #end-turn-btn:active {
+      background: #b05a10;
+    }
+
+    /* ── 随机事件弹窗 ── */
+    #event-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .modal-box {
+      background: #2c2c54;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      padding: 32px 40px;
+      max-width: 420px;
+      text-align: center;
+    }
+
+    .modal-box h2 {
+      margin-bottom: 16px;
+      font-size: 20px;
+      color: #f39c12;
+    }
+
+    #event-text {
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+      color: #ddd;
+    }
+
+    #event-confirm-btn {
+      background: #8e44ad;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 28px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #event-confirm-btn:hover {
+      background: #732d91;
+    }
+  </style>
 </head>
 
 <body>
-  <div id="game-wrapper">
-    <canvas id="mapCanvas" width="700" height="600"></canvas>
 
-    <div id="ui-side">
-      <header>
-        <h2>探索模式</h2>
-        <div class="status-bar">
-          <span>❤️ HP: <b id="hp-val">100</b></span>
-          <span>⚡ 步数: <b id="moves-val">5</b></span>
-        </div>
-      </header>
+  <canvas id="game-canvas"></canvas>
 
-      <div id="log-container">
-        <div id="log"></div>
-      </div>
+  <!-- ① 选角界面 -->
+  <div id="char-select-screen" class="fullscreen">
+    <div class="screen-title">选择你的英雄</div>
+    <div class="screen-sub">从下方选择 2 名英雄开始冒险</div>
+    <div id="hero-slots"></div>
+    <div id="char-selected-info">请选择 2 名英雄</div>
+    <button id="char-confirm-btn" disabled>出发！</button>
+  </div>
 
-      <button id="btn-end-turn">结束回合</button>
+  <!-- ② 地图生成过渡 -->
+  <div id="map-gen-screen" class="fullscreen">
+    <div class="screen-title">生成世界</div>
+    <div id="map-gen-info">正在生成世界…</div>
+    <div class="spinner"></div>
+  </div>
 
-      <div class="legend">
-        <p><span class="dot land"></span> 平原</p>
-        <p><span class="dot forest"></span> 森林</p>
-        <p><span class="dot water"></span> 水域</p>
-      </div>
+  <!-- ③ HUD（地图探索时显示） -->
+  <div id="hud">
+    <span id="movement-points">行动力：-</span>
+    <button id="end-turn-btn">结束回合</button>
+  </div>
+
+  <!-- ④ 随机事件弹窗 -->
+  <div id="event-modal">
+    <div class="modal-box">
+      <h2>⚡ 随机事件</h2>
+      <p id="event-text"></p>
+      <button id="event-confirm-btn">继续</button>
     </div>
   </div>
-  <script type="module" src="./main.js"></script>
+
+  <script type="module" src="./src/main.js"></script>
+
 </body>
 
 </html>
