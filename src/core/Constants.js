@@ -15,11 +15,3 @@ export const TurnPhase = {
   EVALUATE: 'EVALUATE', // 格子判定
   END: 'END'       // 点击结束按钮后的结算
 };
-
-// 可选的英雄池（占位数据，后续替换为真实属性/技能）
-export const HeroRoster = [
-  { id: 'warrior', name: '战士', hp: 140, desc: '高血量，擅长近战' },
-  { id: 'mage', name: '法师', hp: 80, desc: '低血量，魔法伤害高' },
-  { id: 'ranger', name: '游侠', hp: 100, desc: '均衡，擅长远程' },
-  { id: 'rogue', name: '盗贼', hp: 90, desc: '速度快，暴击率高' },
-];

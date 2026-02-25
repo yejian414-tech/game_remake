@@ -1,0 +1,60 @@
+{
+  "heroes": [
+    {
+      "id": "warrior",
+      "name": "战士",
+      "hp": 140,
+      "maxHp": 140,
+      "attack": 20,
+      "defense": 15,
+      "speed": 3,
+      "desc": "高血量，擅长近战",
+      "skillIds": [
+        "slash",
+        "shield_bash"
+      ]
+    },
+    {
+      "id": "mage",
+      "name": "法师",
+      "hp": 80,
+      "maxHp": 80,
+      "attack": 35,
+      "defense": 5,
+      "speed": 4,
+      "desc": "低血量，魔法伤害高",
+      "skillIds": [
+        "fireball",
+        "frost_nova"
+      ]
+    },
+    {
+      "id": "ranger",
+      "name": "游侠",
+      "hp": 100,
+      "maxHp": 100,
+      "attack": 25,
+      "defense": 10,
+      "speed": 5,
+      "desc": "均衡，擅长远程",
+      "skillIds": [
+        "arrow_shot",
+        "evasion"
+      ]
+    },
+    {
+      "id": "rogue",
+      "name": "盗贼",
+      "hp": 90,
+      "maxHp": 90,
+      "attack": 28,
+      "defense": 8,
+      "speed": 6,
+      "desc": "速度快，暴击率高",
+      "skillIds": [
+        "backstab",
+        "evasion"
+      ]
+    }
+  ]
+}
