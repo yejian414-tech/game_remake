@@ -1,5 +1,6 @@
 // src/core/GameController.js
 import { GameState, TurnPhase } from './Constants.js';
+import { HexMap } from '../world/HexMap.js';  // ← 新增
 import { StateMachine } from './StateMachine.js';
 
 export class GameController {
@@ -36,12 +37,13 @@ export class GameController {
     });
 
     // ── 生成地图 ──────────────────────────────────────────
+    // MAP_GENERATION 状态，替换原有的同名代码块
     this.fsm.addState(GameState.MAP_GENERATION, {
       enter: () => {
-        // 把已选英雄传给 UI，让它能展示"正在为 xx 和 xx 生成地图…"之类的提示
         this.ui.showMapGeneration(this.selectedHeroes, () => {
-          // TODO: 这里可以触发程序化地图生成逻辑（换种子、选难度等）
-          // 目前地图已在 HexMap 构造时生成，直接跳过
+          // ← 新增：用英雄组合作为 seed，保证同组合地图可复现
+          const seed = this.selectedHeroes.map(h => h.id).join('+');
+          this.map = new HexMap(this.map.radius, this.map.tileSize, seed);  // ← 新增
           this.fsm.transition(GameState.MAP_EXPLORATION);
         });
       },
