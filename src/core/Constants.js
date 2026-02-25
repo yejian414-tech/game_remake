@@ -1,0 +1,23 @@
+export const GameState = {
+  INITIALIZING: 'INITIALIZING',
+  CHARACTER_SELECT: 'CHARACTER_SELECT',
+  MAP_GENERATION: 'MAP_GENERATION',
+  MAP_EXPLORATION: 'MAP_EXPLORATION',
+  COMBAT: 'COMBAT',            
+  GAME_OVER: 'GAME_OVER'
+};
+
+export const TurnPhase = {
+  START: 'START',
+  PLAYER_MOVE: 'MOVE',
+  EVALUATE: 'EVALUATE',
+  END: 'END'
+};
+
+export const CombatPhase = {
+  TURN_START: 'TURN_START',   
+  AWAIT_PLAYER: 'AWAIT_PLAYER', 
+  EXECUTING: 'EXECUTING',     
+  WIN: 'WIN',
+  LOSE: 'LOSE'
+};
