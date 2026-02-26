@@ -7,6 +7,7 @@ import { CombatManager } from './CombatManager.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Player } from '../entities/Player.js';
 import { DataLoader } from '../data/DataLoader.js';
+import { rollSpeed, Difficulty, formatRoll } from './Dice.js';
 
 // ── 地牢难度 → Dice.Difficulty key 映射 ─────────────────────
 const DIFFICULTY_MAP = {
@@ -42,6 +43,8 @@ export class GameController {
           this.map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE);
           this.player.setGridPos(-MapConfig.RADIUS, MapConfig.RADIUS, this.map);
           this.fsm.transition(GameState.MAP_EXPLORATION);
+          // 出生点初始揭示
+          this.map.revealAround(-MapConfig.RADIUS, MapConfig.RADIUS, 1);
         });
       },
       exit: () => this.ui.hideMapGeneration()
@@ -189,19 +192,58 @@ export class GameController {
   }
 
   startTurn() {
-    this.player.movementPoints = 5;
+    // ── 速度判定：取队伍中速度最高的英雄参与掷骰 ────────────
+    const roller = this.selectedHeroes.length > 0
+      ? this.selectedHeroes.reduce((a, b) => (a.speed ?? 0) >= (b.speed ?? 0) ? a : b)
+      : this.player;
+
+    // 难度 NORMAL：初始平均速度的期望结果落在 3~4 步
+    const result = rollSpeed(roller, Difficulty.NORMAL, 20);
+
+    // gradeIndex 0~4 → 基础步数 1~5
+    const baseMove = result.gradeIndex + 1;
+
+    // 队伍所有英雄装备中的 moveBonus 累加
+    const equipBonus = this.selectedHeroes.reduce((sum, hero) => {
+      return sum + hero.equipSlots.reduce((s, item) => s + (item?.moveBonus ?? 0), 0);
+    }, 0);
+
+    const total = baseMove + equipBonus;
+
+    this.player.movementPoints = total;
     this.ui.updateMovementUI(this.player.movementPoints);
+    console.log(`[Turn] 移动力判定 ${formatRoll(result)} | 装备+${equipBonus} → 合计 ${total}`);
   }
 
   movePlayer(q, r) {
     if (this.fsm.currentState !== GameState.MAP_EXPLORATION) return;
-    if (this.player.movementPoints <= 0) return;
+
+    // 六边形轴坐标距离
+    const dq = q - this.player.q;
+    const dr = r - this.player.r;
+    const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr));
+
+    // 只允许点击相邻格（距离 = 1）
+    if (dist !== 1) return;
+
+    // 按目标格地形决定消耗步数（默认 1，山地 2）
+    const tile = this.map.getTile(q, r);
+    if (!tile) return;
+    const moveCost = tile.type.moveCost ?? 1;
+
+    // 行动力不足时拒绝移动
+    if (this.player.movementPoints < moveCost) {
+      console.log(`[Move] 行动力不足（需要 ${moveCost}，剩余 ${this.player.movementPoints}）`);
+      return;
+    }
 
     this.player.setGridPos(q, r, this.map);
-    this.player.movementPoints--;
+    this.player.movementPoints -= moveCost;
     this.ui.updateMovementUI(this.player.movementPoints);
 
-    const tile = this.map.getTile(q, r);
+    // 每走一步揭示周围一圈
+    this.map.revealAround(q, r, 1);
+
     if (!tile?.content) return;
 
     const content = tile.content;

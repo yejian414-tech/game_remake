@@ -4,9 +4,9 @@
 // 游戏初始只有三种基础地形
 // MARKET / DUNGEON / TREASURE / BOSS 等扩展地形由事件系统在运行时写入
 export const TileType = {
-  GRASS: { id: 0, color: '#7cfc00', name: '平原' },
-  FOREST: { id: 1, color: '#228b22', name: '森林' },
-  MOUNTAIN: { id: 2, color: '#8b4513', name: '山脉' },
+  GRASS: { id: 0, color: '#7cfc00', name: '平原', moveCost: 1 },
+  FOREST: { id: 1, color: '#228b22', name: '森林', moveCost: 1 },
+  MOUNTAIN: { id: 2, color: '#8b4513', name: '山脉', moveCost: 2 },
 };
 
 // ── 地块内容类型 ─────────────────────────────────────────────
