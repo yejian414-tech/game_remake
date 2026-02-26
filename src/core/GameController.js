@@ -5,6 +5,7 @@ import { StateMachine } from './StateMachine.js';
 import { CombatManager } from './CombatManager.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Player } from '../entities/Player.js';
+import { DataLoader } from '../data/DataLoader.js';
 
 export class GameController {
   constructor(map, player, uiManager) {
@@ -20,17 +21,7 @@ export class GameController {
   setupStates() {
     this.fsm.addState(GameState.CHARACTER_SELECT, {
       enter: () => this.ui.showCharacterSelect(hs => {
-        this.selectedHeroes = hs.map(data => {
-          const hero = new Player(data.name);
-          hero.id = data.id;
-          hero.maxHp = data.maxHp || data.hp;
-          hero.hp = data.hp;
-          hero.attack = data.attack || 20;
-          hero.defense = data.defense || 10;
-          hero.speed = data.speed || 5;
-          hero.type = 'player';
-          return hero;
-        });
+        this.selectedHeroes = hs.map(data => this._createHeroFromData(data));
         this.fsm.transition(GameState.MAP_GENERATION);
       }),
       exit: () => this.ui.hideCharacterSelect()
@@ -39,9 +30,7 @@ export class GameController {
     this.fsm.addState(GameState.MAP_GENERATION, {
       enter: () => {
         this.ui.showMapGeneration(this.selectedHeroes, () => {
-          // 使用 MapConfig 保证和 main.js 一致
           this.map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE);
-          // 重新生成地图后把玩家放到左下角
           this.player.setGridPos(-MapConfig.RADIUS, MapConfig.RADIUS, this.map);
           this.fsm.transition(GameState.MAP_EXPLORATION);
         });
@@ -55,11 +44,17 @@ export class GameController {
 
     this.fsm.addState(GameState.COMBAT, {
       enter: (enemyData) => {
-        const combatEnemy = new Enemy(enemyData.name, 'goblin', 1);
-        combatEnemy.type = 'enemy';
-        combatEnemy.attack = 10;
-        combatEnemy.speed = 4;
-        this.combatManager = new CombatManager(this.selectedHeroes, [combatEnemy], this.ui);
+        // 根据 enemyData 中若有 level 字段则使用，否则默认 1
+        const combatEnemy = new Enemy(
+          enemyData.name,
+          enemyData.monsterType || 'goblin',
+          enemyData.level || 1
+        );
+        this.combatManager = new CombatManager(
+          this.selectedHeroes,
+          [combatEnemy],
+          this.ui
+        );
         this.combatManager.init();
         this.ui.showCombatOverlay();
       },
@@ -69,6 +64,45 @@ export class GameController {
       }
     });
   }
+
+  // ── 英雄数据 → Player 实例 ────────────────────────────────
+
+  _createHeroFromData(data) {
+    const hero = new Player(data.name);
+    hero.id = data.id;
+    hero.maxHp = data.maxHp || data.hp;
+    hero.hp = data.hp;
+    hero.type = 'player';
+
+    // 六维属性
+    if (data.stats) {
+      hero.strength = data.stats.strength ?? hero.strength;
+      hero.toughness = data.stats.toughness ?? hero.toughness;
+      hero.intellect = data.stats.intellect ?? hero.intellect;
+      hero.awareness = data.stats.awareness ?? hero.awareness;
+      hero.talent = data.stats.talent ?? hero.talent;
+      hero.agility = data.stats.agility ?? hero.agility;
+    }
+
+    // 技能槽（最多 4 格）
+    if (data.skillSlots) {
+      data.skillSlots.forEach((sid, i) => {
+        if (sid) {
+          const skill = DataLoader.getSkill(sid);
+          if (skill) hero.equipSkill(skill, i);
+        }
+      });
+    }
+
+    // 装备槽（最多 2 格，初始通常为空）
+    // 若 data.equipSlots 有预置装备 id，可在此处 DataLoader.getItem(id)
+
+    // 刷新派生属性
+    hero.refreshDerivedStats();
+    return hero;
+  }
+
+  // ── 主循环钩子 ────────────────────────────────────────────
 
   update(dt) {
     if (this.fsm.currentState === GameState.MAP_EXPLORATION) {
@@ -121,7 +155,12 @@ export class GameController {
     ctx.fillStyle = '#333';
     ctx.fillRect(unit.x - barWidth / 2, unit.y + 45, barWidth, 8);
     ctx.fillStyle = unit.type === 'player' ? '#2ecc71' : '#e74c3c';
-    ctx.fillRect(unit.x - barWidth / 2, unit.y + 45, barWidth * (unit.hp / unit.maxHp), 8);
+    ctx.fillRect(
+      unit.x - barWidth / 2,
+      unit.y + 45,
+      barWidth * (unit.hp / unit.maxHp),
+      8
+    );
   }
 
   startTurn() {
