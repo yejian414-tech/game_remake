@@ -9,7 +9,6 @@ import { Player } from '../entities/Player.js';
 import { DataLoader } from '../data/DataLoader.js';
 import { rollSpeed, Difficulty, formatRoll } from './Dice.js';
 
-// ── 地牢难度 → Dice.Difficulty key 映射 ─────────────────────
 const DIFFICULTY_MAP = {
   EASY: 'EASY',
   NORMAL: 'NORMAL',
@@ -43,7 +42,6 @@ export class GameController {
           this.map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE);
           this.player.setGridPos(-MapConfig.RADIUS, MapConfig.RADIUS, this.map);
           this.fsm.transition(GameState.MAP_EXPLORATION);
-          // 出生点初始揭示
           this.map.revealAround(-MapConfig.RADIUS, MapConfig.RADIUS, 1);
         });
       },
@@ -56,11 +54,9 @@ export class GameController {
 
     this.fsm.addState(GameState.COMBAT, {
       enter: (contentData) => {
-        // contentData 为 tile.content（dungeon 或 boss 对象）
         const isBoss = contentData.type === TileContentType.BOSS;
         const level = contentData.level ?? 1;
 
-        // Boss 属性额外加倍
         const statOverrides = isBoss
           ? { strength: 20 + level * 6, toughness: 16 + level * 5, agility: 10 + level * 2 }
           : {};
@@ -71,8 +67,6 @@ export class GameController {
           level,
           statOverrides
         );
-
-        // 将难度字符串传给 CombatManager，以便后续 rollAttack 使用
         combatEnemy.difficultyKey = DIFFICULTY_MAP[contentData.difficulty] ?? 'NORMAL';
 
         this.combatManager = new CombatManager(
@@ -92,8 +86,6 @@ export class GameController {
       }
     });
   }
-
-  // ── 英雄数据 → Player 实例 ────────────────────────────────
 
   _createHeroFromData(data) {
     const hero = new Player(data.name);
@@ -124,8 +116,6 @@ export class GameController {
     return hero;
   }
 
-  // ── 主循环钩子 ────────────────────────────────────────────
-
   update(dt) {
     if (this.fsm.currentState === GameState.MAP_EXPLORATION) {
       this.player.update(dt);
@@ -141,11 +131,14 @@ export class GameController {
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     if (this.fsm.currentState === GameState.MAP_EXPLORATION) {
-      this.map.draw(ctx, camera);
+      // ↓ 唯一改动：传入玩家坐标，启用战争迷雾
+      this.map.draw(ctx, camera, this.player.q, this.player.r);
+
       ctx.save();
       ctx.translate(camera.x, camera.y);
       this.player.draw(ctx, this.map.tileSize);
       ctx.restore();
+
     } else if (this.fsm.currentState === GameState.COMBAT) {
       this.renderCombat(ctx);
     }
@@ -155,7 +148,6 @@ export class GameController {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Boss 战背景加深红色叠层
     if (this.combatManager?.enemies[0]?.monsterType === 'boss') {
       ctx.fillStyle = 'rgba(80, 0, 0, 0.25)';
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -192,24 +184,18 @@ export class GameController {
   }
 
   startTurn() {
-    // ── 速度判定：取队伍中速度最高的英雄参与掷骰 ────────────
     const roller = this.selectedHeroes.length > 0
       ? this.selectedHeroes.reduce((a, b) => (a.speed ?? 0) >= (b.speed ?? 0) ? a : b)
       : this.player;
 
-    // 难度 NORMAL：初始平均速度的期望结果落在 3~4 步
     const result = rollSpeed(roller, Difficulty.NORMAL, 20);
-
-    // gradeIndex 0~4 → 基础步数 1~5
     const baseMove = result.gradeIndex + 1;
 
-    // 队伍所有英雄装备中的 moveBonus 累加
     const equipBonus = this.selectedHeroes.reduce((sum, hero) => {
       return sum + hero.equipSlots.reduce((s, item) => s + (item?.moveBonus ?? 0), 0);
     }, 0);
 
     const total = baseMove + equipBonus;
-
     this.player.movementPoints = total;
     this.ui.updateMovementUI(this.player.movementPoints);
     console.log(`[Turn] 移动力判定 ${formatRoll(result)} | 装备+${equipBonus} → 合计 ${total}`);
@@ -218,20 +204,15 @@ export class GameController {
   movePlayer(q, r) {
     if (this.fsm.currentState !== GameState.MAP_EXPLORATION) return;
 
-    // 六边形轴坐标距离
     const dq = q - this.player.q;
     const dr = r - this.player.r;
     const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr));
-
-    // 只允许点击相邻格（距离 = 1）
     if (dist !== 1) return;
 
-    // 按目标格地形决定消耗步数（默认 1，山地 2）
     const tile = this.map.getTile(q, r);
     if (!tile) return;
-    const moveCost = tile.type.moveCost ?? 1;
 
-    // 行动力不足时拒绝移动
+    const moveCost = tile.type.moveCost ?? 1;
     if (this.player.movementPoints < moveCost) {
       console.log(`[Move] 行动力不足（需要 ${moveCost}，剩余 ${this.player.movementPoints}）`);
       return;
@@ -240,21 +221,16 @@ export class GameController {
     this.player.setGridPos(q, r, this.map);
     this.player.movementPoints -= moveCost;
     this.ui.updateMovementUI(this.player.movementPoints);
-
-    // 每走一步揭示周围一圈
     this.map.revealAround(q, r, 1);
 
     if (!tile?.content) return;
-
     const content = tile.content;
 
     if (content.type === TileContentType.DUNGEON || content.type === TileContentType.BOSS) {
-      // 进入战斗，清除格子内容（防止重复触发）
       tile.content = null;
       this.fsm.transition(GameState.COMBAT, content);
 
     } else if (content.type === TileContentType.TREASURE) {
-      // 宝箱：暂时用 alert 提示，后续可替换为战利品界面
       const tierLabel = ['', '普通', '稀有', '史诗'][content.lootTier] ?? '普通';
       alert(`🎁 获得 ${tierLabel} 宝箱奖励！（Tier ${content.lootTier}）`);
       tile.content = null;

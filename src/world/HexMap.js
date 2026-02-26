@@ -11,7 +11,6 @@ export class HexMap {
     this.generateMap();
   }
 
-  // 只生成地形，特殊内容由事件系统负责写入
   generateMap() {
     for (let q = -this.radius; q <= this.radius; q++) {
       const r1 = Math.max(-this.radius, -q - this.radius);
@@ -28,7 +27,7 @@ export class HexMap {
 
   getTile(q, r) { return this.tiles.get(`${q},${r}`); }
 
-  // 将 (q,r) 为圆心、半径 revealRadius 格内的格子标记为已探索
+  // ── 揭示周围一圈 ─────────────────────────────────────────
   revealAround(q, r, revealRadius = 1) {
     for (let dq = -revealRadius; dq <= revealRadius; dq++) {
       for (let dr = -revealRadius; dr <= revealRadius; dr++) {
@@ -37,6 +36,22 @@ export class HexMap {
         if (tile && !tile.isRevealed) tile.isRevealed = true;
       }
     }
+  }
+
+  /**
+   * 放置事件内容，并自动揭示该格 + 周围一圈战争迷雾。
+   * 所有往 tile 上写 content 的地方都应改用此方法。
+   *
+   * @param {number} q
+   * @param {number} r
+   * @param {object} content   makeDungeon / makeBoss / makeTreasure 的返回值
+   * @param {number} [revealRadius=1]  同时揭示的半径，默认揭示自身 + 周围一圈
+   */
+  placeContent(q, r, content, revealRadius = 1) {
+    const tile = this.getTile(q, r);
+    if (!tile) return;
+    tile.content = content;
+    this.revealAround(q, r, revealRadius);
   }
 
   pixelToHex(x, y) {
@@ -58,10 +73,35 @@ export class HexMap {
     return { q: rq, r: rr };
   }
 
-  draw(ctx, camera) {
+  /**
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {Camera} camera
+   * @param {number} playerQ   玩家当前格 q（用于计算当前视野）
+   * @param {number} playerR   玩家当前格 r
+   * @param {number} [sightRadius=2]  可见半径（格数）
+   */
+  draw(ctx, camera, playerQ, playerR, sightRadius = 4) {
     ctx.save();
     ctx.translate(camera.x, camera.y);
-    this.tiles.forEach(tile => tile.draw(ctx, this.tileSize));
+
+    this.tiles.forEach(tile => {
+      let visState;
+
+      if (!tile.isRevealed) {
+        visState = 'hidden';
+      } else {
+        // 六边形轴坐标距离
+        const dist = Math.max(
+          Math.abs(tile.q - playerQ),
+          Math.abs(tile.r - playerR),
+          Math.abs((tile.q + tile.r) - (playerQ + playerR))
+        );
+        visState = dist <= sightRadius ? 'visible' : 'explored';
+      }
+
+      tile.draw(ctx, this.tileSize, false, visState);
+    });
+
     ctx.restore();
   }
 }
