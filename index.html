@@ -114,6 +114,23 @@
     .skill-btn:hover {
       background: #cf6d17;
     }
+
+    /* ── 进度条动画 ───────────────────────────────────────── */
+    @keyframes pulse-red {
+
+      0%,
+      100% {
+        box-shadow: 0 0 4px #e74c3c;
+      }
+
+      50% {
+        box-shadow: 0 0 14px #e74c3c;
+      }
+    }
+
+    #turn-progress-bar.danger {
+      animation: pulse-red 0.8s infinite;
+    }
   </style>
 </head>
 
@@ -136,6 +153,19 @@
     <span id="movement-points">行动力：-</span>
     <button id="end-turn-btn"
       style="background:#e67e22; border:none; color:white; padding:6px 16px; border-radius:4px; cursor:pointer;">结束回合</button>
+
+    <!-- ── 回合进度条 ── -->
+    <div style="display:flex;align-items:center;gap:6px;margin-left:8px;">
+      <span style="font-size:12px;color:#f39c12;white-space:nowrap;">最终Boss</span>
+      <div
+        style="position:relative;width:140px;height:12px;background:#333;border-radius:6px;overflow:hidden;border:1px solid #555;">
+        <div id="turn-progress-bar"
+          style="height:100%;width:0%;background:linear-gradient(90deg,#e67e22,#e74c3c);border-radius:6px;transition:width 0.4s ease;">
+        </div>
+      </div>
+      <span id="turn-progress-text" style="font-size:11px;color:#aaa;white-space:nowrap;">0/20</span>
+      <span>💀</span>
+    </div>
   </div>
 
   <div id="combat-ui">

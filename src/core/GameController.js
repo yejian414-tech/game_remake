@@ -1,5 +1,5 @@
 // src/core/GameController.js
-import { GameState, MapConfig } from './Constants.js';
+import { GameState, MapConfig, TurnConfig } from './Constants.js';
 import { HexMap } from '../world/HexMap.js';
 import { TileContentType } from '../world/Tile.js';
 import { StateMachine } from './StateMachine.js';
@@ -19,11 +19,6 @@ const DIFFICULTY_MAP = {
 };
 
 export class GameController {
-  /**
-   * @param {HexMap}     map
-   * @param {Player}     player      地图上的移动代理（不参与战斗判定）
-   * @param {UIManager}  ui
-   */
   constructor(map, player, ui) {
     this.map = map;
     this.player = player;
@@ -120,10 +115,6 @@ export class GameController {
     }
   }
 
-  /**
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {Camera} camera
-   */
   render(ctx, camera) {
     const state = this.fsm.currentState;
 
@@ -140,6 +131,7 @@ export class GameController {
   _startTurn() {
     this.turnCount += 1;
     this.ui.updateTurnCount(this.turnCount);
+    this.ui.updateProgressBar(this.turnCount, TurnConfig.MAX_TURNS); // ← 刷新进度条
 
     // 取速度最高的英雄进行移动力判定
     const roller = this.selectedHeroes.length > 0

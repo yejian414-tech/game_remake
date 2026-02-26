@@ -1,15 +1,6 @@
 // src/ui/UIManager.js
 import { DataLoader } from '../data/DataLoader.js';
 
-/**
- * UIManager — 负责所有 DOM 操作与界面状态切换。
- *
- * 与 GameController 的耦合通过构造时注入回调解决，
- * 避免双向引用（UIManager ↔ GameController 循环依赖）。
- *
- * @param {object} elements   需要操控的 DOM 节点集合
- * @param {object} callbacks  游戏逻辑回调，由 GameController 提供
- */
 export class UIManager {
   constructor(elements, callbacks = {}) {
     // ── DOM 元素 ─────────────────────────────────────────────
@@ -85,6 +76,22 @@ export class UIManager {
   showMapUI() { this.els.hud.style.display = 'flex'; }
   updateMovementUI(points) { this.els.movementEl.textContent = `行动力：${points}`; }
   updateTurnCount(turn) { this.els.turnCountEl.textContent = `回合：${turn}`; }
+
+  /**
+   * 更新回合进度条
+   * @param {number} turn      当前回合
+   * @param {number} maxTurns  最大回合数
+   */
+  updateProgressBar(turn, maxTurns) {
+    const bar = document.getElementById('turn-progress-bar');
+    const text = document.getElementById('turn-progress-text');
+    if (!bar) return;
+    const pct = Math.min(100, Math.round(turn / maxTurns * 100));
+    bar.style.width = `${pct}%`;
+    text.textContent = `${turn}/${maxTurns}`;
+    // 最后 3 回合红色脉冲警告
+    bar.classList.toggle('danger', turn >= maxTurns - 3);
+  }
 
   // ── 战斗界面 ─────────────────────────────────────────────
 
