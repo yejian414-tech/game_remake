@@ -12,6 +12,7 @@ import { InputHandler } from './src/core/InputHandler.js';
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 const movementEl = document.getElementById('movement-points');
+const turnCountEl = document.getElementById('turn-count');
 const endTurnBtn = document.getElementById('end-turn-btn');
 const hud = document.getElementById('hud');
 
@@ -78,6 +79,10 @@ const uiManager = {
     movementEl.textContent = `行动力：${points}`;
   },
 
+  updateTurnCount(turn) {
+    turnCountEl.textContent = `回合：${turn}`;
+  },
+
   showCombatOverlay() {
     document.getElementById('combat-ui').style.display = 'block';
     hud.style.display = 'none';
@@ -107,7 +112,7 @@ const uiManager = {
   },
 };
 
-// ── 工具：轴坐标 → 像素中心（与 Tile.getCanvasPos 公式相同）─
+// ── 工具：轴坐标 → 像素中心 ─────────────────────────────────
 function hexToPixel(q, r, size) {
   return {
     x: size * (3 / 2 * q),
@@ -121,19 +126,16 @@ let map, camera, player, gameController, inputHandler;
 async function init() {
   await DataLoader.loadAll();
 
-  // 地图参数统一读 MapConfig，与 GameController 保持一致
   map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE);
   camera = new Camera(canvas.width, canvas.height);
   player = new Player('Leader');
 
-  // 摄像头初始位置：地图左下角 (q=-radius, r=radius)
   const bottomLeft = hexToPixel(-MapConfig.RADIUS, MapConfig.RADIUS, MapConfig.TILE_SIZE);
   camera.x = MapConfig.PADDING - bottomLeft.x;
   camera.y = canvas.height - MapConfig.PADDING - bottomLeft.y;
 
   gameController = new GameController(map, player, uiManager);
 
-  // InputHandler 用函数引用获取 map，地图重新生成后自动拿到新实例
   inputHandler = new InputHandler(
     canvas,
     camera,

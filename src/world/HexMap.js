@@ -47,7 +47,7 @@ export class HexMap {
    * @param {object} content   makeDungeon / makeBoss / makeTreasure 的返回值
    * @param {number} [revealRadius=1]  同时揭示的半径，默认揭示自身 + 周围一圈
    */
-  placeContent(q, r, content, revealRadius = 1) {
+  placeContent(q, r, content, revealRadius = 2) {
     const tile = this.getTile(q, r);
     if (!tile) return;
     tile.content = content;

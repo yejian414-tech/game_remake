@@ -6,7 +6,6 @@
       "type": "attack",
       "target": "single",
       "power": 120,
-      "mpCost": 0,
       "cooldown": 0,
       "desc": "对单个敌人造成 120% 攻击力的物理伤害"
     },
@@ -16,7 +15,6 @@
       "type": "attack",
       "target": "single",
       "power": 80,
-      "mpCost": 10,
       "cooldown": 2,
       "desc": "攻击并使目标眩晕 1 回合"
     },
@@ -26,7 +24,6 @@
       "type": "magic",
       "target": "aoe",
       "power": 150,
-      "mpCost": 20,
       "cooldown": 1,
       "desc": "对所有敌人造成 150% 魔法攻击的火焰伤害"
     },
@@ -36,7 +33,6 @@
       "type": "magic",
       "target": "aoe",
       "power": 100,
-      "mpCost": 25,
       "cooldown": 3,
       "desc": "冻结所有敌人 2 回合"
     },
@@ -46,7 +42,6 @@
       "type": "attack",
       "target": "single",
       "power": 110,
-      "mpCost": 0,
       "cooldown": 0,
       "desc": "远程攻击单个敌人"
     },
@@ -56,7 +51,6 @@
       "type": "attack",
       "target": "single",
       "power": 200,
-      "mpCost": 15,
       "cooldown": 3,
       "desc": "暴击率 +50%，造成 200% 攻击力伤害"
     },
@@ -66,7 +60,6 @@
       "type": "buff",
       "target": "self",
       "power": 0,
-      "mpCost": 10,
       "cooldown": 2,
       "desc": "本回合闪避率 +60%"
     }

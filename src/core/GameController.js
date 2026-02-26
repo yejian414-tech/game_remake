@@ -23,6 +23,7 @@ export class GameController {
     this.ui = uiManager;
     this.selectedHeroes = [];
     this.combatManager = null;
+    this.turnCount = 0;
     this.fsm = new StateMachine(GameState.INITIALIZING);
     this.setupStates();
   }
@@ -42,14 +43,18 @@ export class GameController {
           this.map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE);
           this.player.setGridPos(-MapConfig.RADIUS, MapConfig.RADIUS, this.map);
           this.fsm.transition(GameState.MAP_EXPLORATION);
-          this.map.revealAround(-MapConfig.RADIUS, MapConfig.RADIUS, 1);
+          this.map.revealAround(-MapConfig.RADIUS, MapConfig.RADIUS, 5);
         });
       },
       exit: () => this.ui.hideMapGeneration()
     });
 
     this.fsm.addState(GameState.MAP_EXPLORATION, {
-      enter: () => { this.ui.showMapUI(); this.startTurn(); }
+      enter: () => {
+        this.turnCount = 0;
+        this.ui.showMapUI();
+        this.startTurn();
+      }
     });
 
     this.fsm.addState(GameState.COMBAT, {
@@ -131,8 +136,7 @@ export class GameController {
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     if (this.fsm.currentState === GameState.MAP_EXPLORATION) {
-      // ↓ 唯一改动：传入玩家坐标，启用战争迷雾
-      this.map.draw(ctx, camera, this.player.q, this.player.r);
+      this.map.draw(ctx, camera, this.player.q, this.player.r, 4);
 
       ctx.save();
       ctx.translate(camera.x, camera.y);
@@ -184,6 +188,9 @@ export class GameController {
   }
 
   startTurn() {
+    this.turnCount += 1;
+    this.ui.updateTurnCount(this.turnCount);
+
     const roller = this.selectedHeroes.length > 0
       ? this.selectedHeroes.reduce((a, b) => (a.speed ?? 0) >= (b.speed ?? 0) ? a : b)
       : this.player;
@@ -198,7 +205,7 @@ export class GameController {
     const total = baseMove + equipBonus;
     this.player.movementPoints = total;
     this.ui.updateMovementUI(this.player.movementPoints);
-    console.log(`[Turn] 移动力判定 ${formatRoll(result)} | 装备+${equipBonus} → 合计 ${total}`);
+    console.log(`[Turn ${this.turnCount}] 移动力判定 ${formatRoll(result)} | 装备+${equipBonus} → 合计 ${total}`);
   }
 
   movePlayer(q, r) {
@@ -221,7 +228,7 @@ export class GameController {
     this.player.setGridPos(q, r, this.map);
     this.player.movementPoints -= moveCost;
     this.ui.updateMovementUI(this.player.movementPoints);
-    this.map.revealAround(q, r, 1);
+    this.map.revealAround(q, r, 2);
 
     if (!tile?.content) return;
     const content = tile.content;
