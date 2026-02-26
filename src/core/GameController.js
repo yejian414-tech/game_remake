@@ -7,16 +7,8 @@ import { CombatManager } from './CombatManager.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Player } from '../entities/Player.js';
 import { DataLoader } from '../data/DataLoader.js';
-import { rollSpeed, Difficulty, formatRoll } from './Dice.js';
+import { rollSpeed, formatRoll } from './Dice.js';
 import { Renderer } from '../rendering/Renderer.js';
-
-/** content.difficulty 字符串 → Difficulty 键映射 */
-const DIFFICULTY_MAP = {
-  EASY: 'EASY',
-  NORMAL: 'NORMAL',
-  HARD: 'HARD',
-  EXTREME: 'EXTREME',
-};
 
 export class GameController {
   constructor(map, player, ui) {
@@ -83,7 +75,6 @@ export class GameController {
       level,
       statOverrides
     );
-    enemy.difficultyKey = DIFFICULTY_MAP[contentData.difficulty] ?? 'NORMAL';
 
     this.combatManager = new CombatManager(this.selectedHeroes, [enemy], this.ui);
     this.combatManager.init();
@@ -91,7 +82,7 @@ export class GameController {
 
     const tag = isBoss
       ? `⚠️ Boss 战！`
-      : `⚔️ 地牢 Lv.${level}（${contentData.difficulty}）`;
+      : `⚔️ 地牢 Lv.${level}`;
     console.log(`[Combat] ${tag} → ${contentData.name}`);
   }
 
@@ -131,14 +122,13 @@ export class GameController {
   _startTurn() {
     this.turnCount += 1;
     this.ui.updateTurnCount(this.turnCount);
-    this.ui.updateProgressBar(this.turnCount, TurnConfig.MAX_TURNS); // ← 刷新进度条
+    this.ui.updateProgressBar(this.turnCount, TurnConfig.MAX_TURNS);
 
-    // 取速度最高的英雄进行移动力判定
     const roller = this.selectedHeroes.length > 0
       ? this.selectedHeroes.reduce((a, b) => ((a.speed ?? 0) >= (b.speed ?? 0) ? a : b))
       : this.player;
 
-    const result = rollSpeed(roller, Difficulty.NORMAL, 20);
+    const result = rollSpeed(roller, 0.5, 20);
     const baseMove = result.gradeIndex + 1;
     const equipBonus = this.selectedHeroes.reduce((sum, hero) =>
       sum + hero.equipSlots.reduce((s, item) => s + (item?.moveBonus ?? 0), 0), 0);
