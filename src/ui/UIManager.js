@@ -12,7 +12,7 @@ export class UIManager {
       mapGenScreen: elements.mapGenScreen,
       hud: elements.hud,
       movementEl: elements.movementEl,
-      turnCountEl: elements.turnCountEl,
+      // turnCountEl 已移除，由顶部进度条接管
       combatUI: elements.combatUI,
       skillPanel: elements.skillPanel,
     };
@@ -73,12 +73,25 @@ export class UIManager {
 
   // ── HUD ──────────────────────────────────────────────────
 
-  showMapUI() { this.els.hud.style.display = 'flex'; }
-  updateMovementUI(points) { this.els.movementEl.textContent = `行动力：${points}`; }
-  updateTurnCount(turn) { this.els.turnCountEl.textContent = `回合：${turn}`; }
+  showMapUI() {
+    this.els.hud.style.display = 'flex';
+
+    // 同时显示顶部进度条
+    const top = document.getElementById('top-progress');
+    if (top) top.style.display = 'flex';
+  }
+
+  updateMovementUI(points) {
+    this.els.movementEl.textContent = `行动力：${points}`;
+  }
+
+  /** 保留签名兼容 GameController，但回合号现在只显示在顶部进度条里 */
+  updateTurnCount(_turn) {
+    // 已由 updateProgressBar 统一更新，此处留空即可
+  }
 
   /**
-   * 更新回合进度条
+   * 更新顶部回合进度条
    * @param {number} turn      当前回合
    * @param {number} maxTurns  最大回合数
    */
@@ -86,9 +99,11 @@ export class UIManager {
     const bar = document.getElementById('turn-progress-bar');
     const text = document.getElementById('turn-progress-text');
     if (!bar) return;
+
     const pct = Math.min(100, Math.round(turn / maxTurns * 100));
     bar.style.width = `${pct}%`;
-    text.textContent = `${turn}/${maxTurns}`;
+    if (text) text.textContent = `${turn}/${maxTurns}`;
+
     // 最后 3 回合红色脉冲警告
     bar.classList.toggle('danger', turn >= maxTurns - 3);
   }
