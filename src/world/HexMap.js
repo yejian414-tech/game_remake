@@ -1,4 +1,4 @@
-// game_remake/src/world/HexMap.js
+// src/world/HexMap.js
 import { Tile, TileType } from './Tile.js';
 import { SeededRandom } from '../utils/SeededRandom.js';
 
@@ -11,30 +11,37 @@ export class HexMap {
     this.generateMap();
   }
 
+  // 只生成地形，特殊内容由事件系统负责写入
   generateMap() {
     for (let q = -this.radius; q <= this.radius; q++) {
-      let r1 = Math.max(-this.radius, -q - this.radius);
-      let r2 = Math.min(this.radius, -q + this.radius);
+      const r1 = Math.max(-this.radius, -q - this.radius);
+      const r2 = Math.min(this.radius, -q + this.radius);
       for (let r = r1; r <= r2; r++) {
         let type = TileType.GRASS;
-        if (this.rng.next() > 0.95) type = TileType.MOUNTAIN;
-        else if (this.rng.next() > 0.8) type = TileType.FOREST;
-
-        const tile = new Tile(q, r, type);
-        // 15% 概率生成敌人 (红色红点)
-        if ((q !== 0 || r !== 0) && this.rng.next() > 0.85) {
-          tile.content = { type: 'enemy', name: '森林哥布林' };
-        }
-        this.tiles.set(`${q},${r}`, tile);
+        const roll = this.rng.next();
+        if (roll > 0.96) type = TileType.MOUNTAIN;
+        else if (roll > 0.82) type = TileType.FOREST;
+        this.tiles.set(`${q},${r}`, new Tile(q, r, type));
       }
     }
   }
 
   getTile(q, r) { return this.tiles.get(`${q},${r}`); }
 
+  // 将 (q,r) 为圆心、半径 revealRadius 格内的格子标记为已探索
+  revealAround(q, r, revealRadius = 1) {
+    for (let dq = -revealRadius; dq <= revealRadius; dq++) {
+      for (let dr = -revealRadius; dr <= revealRadius; dr++) {
+        if (Math.abs(dq + dr) > revealRadius) continue;
+        const tile = this.getTile(q + dq, r + dr);
+        if (tile && !tile.isRevealed) tile.isRevealed = true;
+      }
+    }
+  }
+
   pixelToHex(x, y) {
-    const q = (2/3 * x) / this.tileSize;
-    const r = (-1/3 * x + Math.sqrt(3)/3 * y) / this.tileSize;
+    const q = (2 / 3 * x) / this.tileSize;
+    const r = (-1 / 3 * x + Math.sqrt(3) / 3 * y) / this.tileSize;
     return this.hexRound(q, r);
   }
 
@@ -52,7 +59,7 @@ export class HexMap {
   }
 
   draw(ctx, camera) {
-    ctx.save(); 
+    ctx.save();
     ctx.translate(camera.x, camera.y);
     this.tiles.forEach(tile => tile.draw(ctx, this.tileSize));
     ctx.restore();

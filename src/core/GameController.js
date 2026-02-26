@@ -1,11 +1,20 @@
 // src/core/GameController.js
 import { GameState, TurnPhase, MapConfig } from './Constants.js';
 import { HexMap } from '../world/HexMap.js';
+import { TileContentType } from '../world/Tile.js';
 import { StateMachine } from './StateMachine.js';
 import { CombatManager } from './CombatManager.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Player } from '../entities/Player.js';
 import { DataLoader } from '../data/DataLoader.js';
+
+// ── 地牢难度 → Dice.Difficulty key 映射 ─────────────────────
+const DIFFICULTY_MAP = {
+  EASY: 'EASY',
+  NORMAL: 'NORMAL',
+  HARD: 'HARD',
+  EXTREME: 'EXTREME',
+};
 
 export class GameController {
   constructor(map, player, uiManager) {
@@ -43,13 +52,26 @@ export class GameController {
     });
 
     this.fsm.addState(GameState.COMBAT, {
-      enter: (enemyData) => {
-        // 根据 enemyData 中若有 level 字段则使用，否则默认 1
+      enter: (contentData) => {
+        // contentData 为 tile.content（dungeon 或 boss 对象）
+        const isBoss = contentData.type === TileContentType.BOSS;
+        const level = contentData.level ?? 1;
+
+        // Boss 属性额外加倍
+        const statOverrides = isBoss
+          ? { strength: 20 + level * 6, toughness: 16 + level * 5, agility: 10 + level * 2 }
+          : {};
+
         const combatEnemy = new Enemy(
-          enemyData.name,
-          enemyData.monsterType || 'goblin',
-          enemyData.level || 1
+          contentData.name,
+          isBoss ? 'boss' : 'dungeon',
+          level,
+          statOverrides
         );
+
+        // 将难度字符串传给 CombatManager，以便后续 rollAttack 使用
+        combatEnemy.difficultyKey = DIFFICULTY_MAP[contentData.difficulty] ?? 'NORMAL';
+
         this.combatManager = new CombatManager(
           this.selectedHeroes,
           [combatEnemy],
@@ -57,6 +79,9 @@ export class GameController {
         );
         this.combatManager.init();
         this.ui.showCombatOverlay();
+
+        const tag = isBoss ? '⚠️ Boss 战！' : `⚔️ 地牢 Lv.${level}（${contentData.difficulty}）`;
+        console.log(`[Combat] ${tag} → ${contentData.name}`);
       },
       exit: () => {
         this.combatManager = null;
@@ -74,7 +99,6 @@ export class GameController {
     hero.hp = data.hp;
     hero.type = 'player';
 
-    // 六维属性
     if (data.stats) {
       hero.strength = data.stats.strength ?? hero.strength;
       hero.toughness = data.stats.toughness ?? hero.toughness;
@@ -84,7 +108,6 @@ export class GameController {
       hero.agility = data.stats.agility ?? hero.agility;
     }
 
-    // 技能槽（最多 4 格）
     if (data.skillSlots) {
       data.skillSlots.forEach((sid, i) => {
         if (sid) {
@@ -94,10 +117,6 @@ export class GameController {
       });
     }
 
-    // 装备槽（最多 2 格，初始通常为空）
-    // 若 data.equipSlots 有预置装备 id，可在此处 DataLoader.getItem(id)
-
-    // 刷新派生属性
     hero.refreshDerivedStats();
     return hero;
   }
@@ -132,6 +151,12 @@ export class GameController {
   renderCombat(ctx) {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    // Boss 战背景加深红色叠层
+    if (this.combatManager?.enemies[0]?.monsterType === 'boss') {
+      ctx.fillStyle = 'rgba(80, 0, 0, 0.25)';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
 
     this.selectedHeroes.forEach((h, i) => {
       h.targetX = 250;
@@ -177,10 +202,21 @@ export class GameController {
     this.ui.updateMovementUI(this.player.movementPoints);
 
     const tile = this.map.getTile(q, r);
-    if (tile && tile.content?.type === 'enemy') {
-      console.log('遭遇敌人！触发跳转...');
-      this.fsm.transition(GameState.COMBAT, tile.content);
+    if (!tile?.content) return;
+
+    const content = tile.content;
+
+    if (content.type === TileContentType.DUNGEON || content.type === TileContentType.BOSS) {
+      // 进入战斗，清除格子内容（防止重复触发）
       tile.content = null;
+      this.fsm.transition(GameState.COMBAT, content);
+
+    } else if (content.type === TileContentType.TREASURE) {
+      // 宝箱：暂时用 alert 提示，后续可替换为战利品界面
+      const tierLabel = ['', '普通', '稀有', '史诗'][content.lootTier] ?? '普通';
+      alert(`🎁 获得 ${tierLabel} 宝箱奖励！（Tier ${content.lootTier}）`);
+      tile.content = null;
+      console.log(`[Treasure] 拾取 ${content.name}（Tier ${content.lootTier}）`);
     }
   }
 
