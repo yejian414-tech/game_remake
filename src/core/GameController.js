@@ -1,10 +1,10 @@
-// game_remake/src/core/GameController.js
-import { GameState, TurnPhase } from './Constants.js';
+// src/core/GameController.js
+import { GameState, TurnPhase, MapConfig } from './Constants.js';
 import { HexMap } from '../world/HexMap.js';
 import { StateMachine } from './StateMachine.js';
 import { CombatManager } from './CombatManager.js';
 import { Enemy } from '../entities/Enemy.js';
-import { Player } from '../entities/Player.js'; // 必须导入 Player 类
+import { Player } from '../entities/Player.js';
 
 export class GameController {
   constructor(map, player, uiManager) {
@@ -20,16 +20,16 @@ export class GameController {
   setupStates() {
     this.fsm.addState(GameState.CHARACTER_SELECT, {
       enter: () => this.ui.showCharacterSelect(hs => {
-        // 核心修复：将 JSON 数据转化为真正的 Player 实例，否则没有 update/draw 方法
         this.selectedHeroes = hs.map(data => {
-            const hero = new Player(data.name);
-            hero.id = data.id;
-            hero.maxHp = data.maxHp || data.hp;
-            hero.hp = data.hp;
-            hero.attack = data.attack || 20;
-            hero.speed = data.speed || 5;
-            hero.type = 'player';
-            return hero;
+          const hero = new Player(data.name);
+          hero.id = data.id;
+          hero.maxHp = data.maxHp || data.hp;
+          hero.hp = data.hp;
+          hero.attack = data.attack || 20;
+          hero.defense = data.defense || 10;
+          hero.speed = data.speed || 5;
+          hero.type = 'player';
+          return hero;
         });
         this.fsm.transition(GameState.MAP_GENERATION);
       }),
@@ -39,7 +39,10 @@ export class GameController {
     this.fsm.addState(GameState.MAP_GENERATION, {
       enter: () => {
         this.ui.showMapGeneration(this.selectedHeroes, () => {
-          this.map = new HexMap(8, 40);
+          // 使用 MapConfig 保证和 main.js 一致
+          this.map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE);
+          // 重新生成地图后把玩家放到左下角
+          this.player.setGridPos(-MapConfig.RADIUS, MapConfig.RADIUS, this.map);
           this.fsm.transition(GameState.MAP_EXPLORATION);
         });
       },
@@ -60,9 +63,9 @@ export class GameController {
         this.combatManager.init();
         this.ui.showCombatOverlay();
       },
-      exit: () => { 
-        this.combatManager = null; 
-        this.ui.hideCombatOverlay(); 
+      exit: () => {
+        this.combatManager = null;
+        this.ui.hideCombatOverlay();
       }
     });
   }
@@ -71,22 +74,19 @@ export class GameController {
     if (this.fsm.currentState === GameState.MAP_EXPLORATION) {
       this.player.update(dt);
     } else if (this.fsm.currentState === GameState.COMBAT) {
-      // 核心修复：必须调用战斗管理器的更新逻辑，否则战斗不会进行
       if (this.combatManager) this.combatManager.update();
-      
       this.selectedHeroes.forEach(h => h.update(dt));
       if (this.combatManager) this.combatManager.enemies.forEach(e => e.update(dt));
     }
   }
 
   render(ctx, camera) {
-    // 渲染前清除画布，防止残影
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     if (this.fsm.currentState === GameState.MAP_EXPLORATION) {
       this.map.draw(ctx, camera);
-      ctx.save(); 
+      ctx.save();
       ctx.translate(camera.x, camera.y);
       this.player.draw(ctx, this.map.tileSize);
       ctx.restore();
@@ -98,16 +98,18 @@ export class GameController {
   renderCombat(ctx) {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    
+
     this.selectedHeroes.forEach((h, i) => {
-      h.targetX = 250; h.targetY = 200 + i * 150;
+      h.targetX = 250;
+      h.targetY = 200 + i * 150;
       h.draw(ctx, 50);
       this.drawHealthBar(ctx, h);
     });
 
     if (this.combatManager) {
       this.combatManager.enemies.forEach((e, i) => {
-        e.targetX = ctx.canvas.width - 250; e.targetY = 200 + i * 150;
+        e.targetX = ctx.canvas.width - 250;
+        e.targetY = 200 + i * 150;
         e.draw(ctx, 50);
         this.drawHealthBar(ctx, e);
       });
@@ -117,9 +119,9 @@ export class GameController {
   drawHealthBar(ctx, unit) {
     const barWidth = 80;
     ctx.fillStyle = '#333';
-    ctx.fillRect(unit.x - barWidth/2, unit.y + 45, barWidth, 8);
+    ctx.fillRect(unit.x - barWidth / 2, unit.y + 45, barWidth, 8);
     ctx.fillStyle = unit.type === 'player' ? '#2ecc71' : '#e74c3c';
-    ctx.fillRect(unit.x - barWidth/2, unit.y + 45, barWidth * (unit.hp/unit.maxHp), 8);
+    ctx.fillRect(unit.x - barWidth / 2, unit.y + 45, barWidth * (unit.hp / unit.maxHp), 8);
   }
 
   startTurn() {
@@ -128,16 +130,18 @@ export class GameController {
   }
 
   movePlayer(q, r) {
-    if (this.fsm.currentState !== GameState.MAP_EXPLORATION || this.player.movementPoints <= 0) return;
+    if (this.fsm.currentState !== GameState.MAP_EXPLORATION) return;
+    if (this.player.movementPoints <= 0) return;
+
     this.player.setGridPos(q, r, this.map);
     this.player.movementPoints--;
     this.ui.updateMovementUI(this.player.movementPoints);
-    
+
     const tile = this.map.getTile(q, r);
     if (tile && tile.content?.type === 'enemy') {
-      console.log("遭遇敌人！触发跳转...");
+      console.log('遭遇敌人！触发跳转...');
       this.fsm.transition(GameState.COMBAT, tile.content);
-      tile.content = null; 
+      tile.content = null;
     }
   }
 
