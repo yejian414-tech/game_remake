@@ -7,110 +7,18 @@ import { Camera } from './src/world/Camera.js';
 import { Player } from './src/entities/Player.js';
 import { DataLoader } from './src/data/DataLoader.js';
 import { InputHandler } from './src/core/InputHandler.js';
-
-// ── DOM 元素 ─────────────────────────────────────────────────
-const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');
-const movementEl = document.getElementById('movement-points');
-const turnCountEl = document.getElementById('turn-count');
-const endTurnBtn = document.getElementById('end-turn-btn');
-const hud = document.getElementById('hud');
+import { UIManager } from './src/ui/UIManager.js';
 
 // ── 画布自适应 ───────────────────────────────────────────────
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
 window.addEventListener('resize', resize);
 resize();
-
-// ── UI 管理器 ────────────────────────────────────────────────
-const uiManager = {
-  showCharacterSelect(onConfirm) {
-    const screen = document.getElementById('char-select-screen');
-    const slots = document.getElementById('hero-slots');
-    screen.style.display = 'flex';
-    const selected = [];
-    slots.innerHTML = '';
-
-    DataLoader.getAllHeroes().forEach(hero => {
-      const card = document.createElement('div');
-      card.className = 'hero-card';
-      card.innerHTML = `
-        <div style="font-weight:bold;margin-bottom:5px;">${hero.name}</div>
-        <div>HP ${hero.hp}</div>
-      `;
-      card.onclick = () => {
-        if (selected.includes(hero)) {
-          selected.splice(selected.indexOf(hero), 1);
-          card.classList.remove('selected');
-        } else if (selected.length < 2) {
-          selected.push(hero);
-          card.classList.add('selected');
-        }
-        document.getElementById('char-confirm-btn').disabled = selected.length !== 2;
-        document.getElementById('char-selected-info').innerText =
-          `已选 ${selected.length}/2 名英雄`;
-      };
-      slots.appendChild(card);
-    });
-
-    document.getElementById('char-confirm-btn').onclick = () => onConfirm([...selected]);
-  },
-
-  hideCharacterSelect() {
-    document.getElementById('char-select-screen').style.display = 'none';
-  },
-
-  showMapGeneration(heroes, onReady) {
-    document.getElementById('map-gen-screen').style.display = 'flex';
-    setTimeout(onReady, 1000);
-  },
-
-  hideMapGeneration() {
-    document.getElementById('map-gen-screen').style.display = 'none';
-  },
-
-  showMapUI() {
-    hud.style.display = 'flex';
-  },
-
-  updateMovementUI(points) {
-    movementEl.textContent = `行动力：${points}`;
-  },
-
-  updateTurnCount(turn) {
-    turnCountEl.textContent = `回合：${turn}`;
-  },
-
-  showCombatOverlay() {
-    document.getElementById('combat-ui').style.display = 'block';
-    hud.style.display = 'none';
-  },
-
-  hideCombatOverlay() {
-    document.getElementById('combat-ui').style.display = 'none';
-    hud.style.display = 'flex';
-  },
-
-  showCombatCommands(hero, onAction) {
-    const panel = document.getElementById('skill-panel');
-    panel.innerHTML = '';
-    const skills = DataLoader.getHeroSkills(hero.id);
-    skills.forEach(skill => {
-      const btn = document.createElement('button');
-      btn.className = 'skill-btn';
-      btn.innerText = skill.name;
-      btn.onclick = () => onAction(skill);
-      panel.appendChild(btn);
-    });
-  },
-
-  onCombatResult(result) {
-    alert(result === 'win' ? '战斗胜利！' : '不幸阵亡...');
-    gameController.fsm.transition(GameState.MAP_EXPLORATION);
-  },
-};
 
 // ── 工具：轴坐标 → 像素中心 ─────────────────────────────────
 function hexToPixel(q, r, size) {
@@ -120,37 +28,61 @@ function hexToPixel(q, r, size) {
   };
 }
 
-// ── 初始化 ───────────────────────────────────────────────────
-let map, camera, player, gameController, inputHandler;
-
+// ── 启动 ─────────────────────────────────────────────────────
 async function init() {
   await DataLoader.loadAll();
 
-  map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE);
-  camera = new Camera(canvas.width, canvas.height);
-  player = new Player('Leader');
+  // 地图 & 相机
+  const map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE);
+  const camera = new Camera(canvas.width, canvas.height);
+  const player = new Player('Leader');
 
+  // 初始相机对准左下起始位
   const bottomLeft = hexToPixel(-MapConfig.RADIUS, MapConfig.RADIUS, MapConfig.TILE_SIZE);
   camera.x = MapConfig.PADDING - bottomLeft.x;
   camera.y = canvas.height - MapConfig.PADDING - bottomLeft.y;
 
-  gameController = new GameController(map, player, uiManager);
+  // UIManager：收集所有 DOM 节点，注入 onCombatEnd 回调（后面 gameController 创建后再绑定）
+  const ui = new UIManager(
+    {
+      charSelectScreen: document.getElementById('char-select-screen'),
+      heroSlots: document.getElementById('hero-slots'),
+      charConfirmBtn: document.getElementById('char-confirm-btn'),
+      charSelectedInfo: document.getElementById('char-selected-info'),
+      mapGenScreen: document.getElementById('map-gen-screen'),
+      hud: document.getElementById('hud'),
+      movementEl: document.getElementById('movement-points'),
+      turnCountEl: document.getElementById('turn-count'),
+      combatUI: document.getElementById('combat-ui'),
+      skillPanel: document.getElementById('skill-panel'),
+    },
+    {
+      // 战斗结束后由 UIManager 通知 controller 切回探索状态
+      // 此时 gameController 尚未赋值，使用 getter 延迟引用
+      onCombatEnd: (result) => gameController.fsm.transition(GameState.MAP_EXPLORATION),
+    }
+  );
 
-  inputHandler = new InputHandler(
+  // GameController
+  const gameController = new GameController(map, player, ui);
+
+  // 输入处理
+  const inputHandler = new InputHandler(
     canvas,
     camera,
-    () => gameController.map,
+    () => gameController.map,   // 地图可能在游戏中被替换，用 getter
     gameController
   );
-  inputHandler.bind(endTurnBtn);
+  inputHandler.bind(document.getElementById('end-turn-btn'));
 
+  // 启动状态机
   gameController.fsm.transition(GameState.CHARACTER_SELECT);
 
-  const loop = new GameLoop(
-    (dt) => gameController.update(dt),
+  // 游戏循环
+  new GameLoop(
+    dt => gameController.update(dt),
     () => gameController.render(ctx, camera)
-  );
-  loop.start();
+  ).start();
 }
 
 init();

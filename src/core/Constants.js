@@ -6,14 +6,14 @@ export const GameState = {
   MAP_GENERATION: 'MAP_GENERATION',
   MAP_EXPLORATION: 'MAP_EXPLORATION',
   COMBAT: 'COMBAT',
-  GAME_OVER: 'GAME_OVER'
+  GAME_OVER: 'GAME_OVER',
 };
 
 export const TurnPhase = {
   START: 'START',
   PLAYER_MOVE: 'MOVE',
   EVALUATE: 'EVALUATE',
-  END: 'END'
+  END: 'END',
 };
 
 export const CombatPhase = {
@@ -21,7 +21,7 @@ export const CombatPhase = {
   AWAIT_PLAYER: 'AWAIT_PLAYER',
   EXECUTING: 'EXECUTING',
   WIN: 'WIN',
-  LOSE: 'LOSE'
+  LOSE: 'LOSE',
 };
 
 // ── 地图全局配置（main.js 和 GameController.js 统一读这里）──

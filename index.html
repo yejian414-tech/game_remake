@@ -1,26 +1,122 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
   <meta charset="UTF-8" />
   <title>为了宝藏 - 统一架构版</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #1a1a2e; overflow: hidden; font-family: sans-serif; color: white; }
-    #game-canvas { display: block; cursor: grab; }
-    .fullscreen { position: fixed; inset: 0; display: none; justify-content: center; align-items: center; flex-direction: column; background: rgba(10, 10, 30, 0.95); z-index: 50; }
-    #hero-slots { display: flex; gap: 20px; margin-bottom: 24px; }
-    .hero-card { width: 120px; background: #2c2c54; padding: 15px; border-radius: 8px; cursor: pointer; text-align: center; border: 2px solid transparent; }
-    .hero-card.selected { border-color: #f39c12; background: #3d3468; }
-    #char-confirm-btn { background: #e67e22; border: none; padding: 10px 30px; color: white; border-radius: 5px; cursor: pointer; }
-    #char-confirm-btn:disabled { opacity: 0.4; }
-    #hud { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: none; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 10px; z-index: 10; gap: 15px; align-items: center; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1a1a2e;
+      overflow: hidden;
+      font-family: sans-serif;
+      color: white;
+    }
+
+    #game-canvas {
+      display: block;
+      cursor: grab;
+    }
+
+    .fullscreen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      background: rgba(10, 10, 30, 0.95);
+      z-index: 50;
+    }
+
+    #hero-slots {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .hero-card {
+      width: 120px;
+      background: #2c2c54;
+      padding: 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      border: 2px solid transparent;
+    }
+
+    .hero-card.selected {
+      border-color: #f39c12;
+      background: #3d3468;
+    }
+
+    #char-confirm-btn {
+      background: #e67e22;
+      border: none;
+      padding: 10px 30px;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #char-confirm-btn:disabled {
+      opacity: 0.4;
+    }
+
+    #hud {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px 20px;
+      border-radius: 10px;
+      z-index: 10;
+      gap: 15px;
+      align-items: center;
+    }
+
     /* 战斗专用指令层 */
-    #combat-ui { position: fixed; inset: 0; display: none; pointer-events: none; z-index: 100; }
-    #skill-panel { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; }
-    .skill-btn { background: #e67e22; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; border: none; color: white; }
-    .skill-btn:hover { background: #cf6d17; }
+    #combat-ui {
+      position: fixed;
+      inset: 0;
+      display: none;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    #skill-panel {
+      position: absolute;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .skill-btn {
+      background: #e67e22;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      border: none;
+      color: white;
+    }
+
+    .skill-btn:hover {
+      background: #cf6d17;
+    }
   </style>
 </head>
+
 <body>
   <canvas id="game-canvas"></canvas>
 
@@ -38,7 +134,8 @@
   <div id="hud">
     <span id="turn-count">回合：1</span>
     <span id="movement-points">行动力：-</span>
-    <button id="end-turn-btn" style="background:#e67e22; border:none; color:white; padding:6px 16px; border-radius:4px; cursor:pointer;">结束回合</button>
+    <button id="end-turn-btn"
+      style="background:#e67e22; border:none; color:white; padding:6px 16px; border-radius:4px; cursor:pointer;">结束回合</button>
   </div>
 
   <div id="combat-ui">
@@ -47,4 +144,5 @@
 
   <script type="module" src="./main.js"></script>
 </body>
+
 </html>
