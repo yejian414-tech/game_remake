@@ -38,6 +38,7 @@ export class GameController {
     this.fsm.addState(GameState.MAP_GENERATION, {
       enter: () => this.ui.showMapGeneration(this.selectedHeroes, () => {
         this.map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE);
+        this.map.generateEvents();
         this.player.setGridPos(-MapConfig.RADIUS, MapConfig.RADIUS, this.map);
         this.map.revealAround(-MapConfig.RADIUS, MapConfig.RADIUS, 5);
         this.fsm.transition(GameState.MAP_EXPLORATION);
