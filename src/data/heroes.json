@@ -1,0 +1,104 @@
+{
+  "heroes": [
+    {
+      "id": "warrior",
+      "name": "战士",
+      "hp": 140,
+      "maxHp": 140,
+      "desc": "高血量，擅长近战，铁壁之躯",
+      "stats": {
+        "strength": 22,
+        "toughness": 20,
+        "intellect": 6,
+        "awareness": 10,
+        "talent": 8,
+        "agility": 10
+      },
+      "skillSlots": [
+        "slash",
+        "shield_bash",
+        null,
+        null
+      ],
+      "equipSlots": [
+        null,
+        null
+      ]
+    },
+    {
+      "id": "mage",
+      "name": "法师",
+      "hp": 80,
+      "maxHp": 80,
+      "desc": "低血量，魔法伤害高，群体法术",
+      "stats": {
+        "strength": 6,
+        "toughness": 6,
+        "intellect": 28,
+        "awareness": 18,
+        "talent": 20,
+        "agility": 10
+      },
+      "skillSlots": [
+        "fireball",
+        "frost_nova",
+        null,
+        null
+      ],
+      "equipSlots": [
+        null,
+        null
+      ]
+    },
+    {
+      "id": "ranger",
+      "name": "游侠",
+      "hp": 100,
+      "maxHp": 100,
+      "desc": "均衡，擅长远程，高意识",
+      "stats": {
+        "strength": 14,
+        "toughness": 12,
+        "intellect": 10,
+        "awareness": 20,
+        "talent": 12,
+        "agility": 18
+      },
+      "skillSlots": [
+        "arrow_shot",
+        "evasion",
+        null,
+        null
+      ],
+      "equipSlots": [
+        null,
+        null
+      ]
+    },
+    {
+      "id": "rogue",
+      "name": "盗贼",
+      "hp": 90,
+      "maxHp": 90,
+      "desc": "速度最快，暴击率高，擅长奇袭",
+      "stats": {
+        "strength": 16,
+        "toughness": 8,
+        "intellect": 8,
+        "awareness": 16,
+        "talent": 14,
+        "agility": 24
+      },
+      "skillSlots": [
+        "backstab",
+        "evasion",
+        null,
+        null
+      ],
+      "equipSlots": [
+        null,
+        null
+      ]
+    }
+  ]
+}
