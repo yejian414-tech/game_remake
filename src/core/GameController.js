@@ -172,7 +172,7 @@ export class GameController {
 
     this._handleTileContent(tile);
   }
-
+  // ── 玩家事件 ─────────────────────────────────────────────
   _handleTileContent(tile) {
     if (!tile.content) return;
     const content = tile.content;
@@ -210,25 +210,52 @@ export class GameController {
           }
         );
       }else if (content.type === TileContentType.TREASURE) {
-      tile.content = null;
-      const tierLabel = ['', '普通', '稀有', '史诗'][content.lootTier] ?? '普通';
-      this.ui.showEvent(
-        "🎁 Treasure? Ahead",
-        "Probably safe",
-        "open",
-        "Not today",
-        () => {
-          console.log("获得奖励！");
-          // 奖励逻辑
-        },
-        () => {
-          console.log("你选择离开。");
-        }
-      );
+        tile.content = null;
+        const tierLabel = ['', '普通', '稀有', '史诗'][content.lootTier] ?? '普通';
+        this.ui.showEvent(
+          "🎁 Treasure? Ahead",
+          "Probably safe",
+          "open",
+          "Not today",
+          () => {
+            console.log("获得奖励！");
+            // 奖励逻辑
+          },
+          () => {
+            console.log("你选择离开。");
+          }
+        );
       console.log(`[Treasure] 拾取 ${content.name}（Tier ${content.lootTier}）`);
-    }
+      }else if (content.type === TileContentType.ALTAR) {
+        this.ui.showEvent(
+          "🔮 Mysterious Altar",
+          "An ancient alter stands before you.",
+          "🙏 Offer Prayer",
+          "🚶 Walk Away Quietly",
+          () => {
+            tile.content = null;
+            this._handleAltarPray();
+          },
+          () => {
+            console.log("你选择离开祭坛");
+          }
+        );
+      }
   }
-
+// ── 祭坛事件扩展 ─────────────────────────────────────────────
+    _handleAltarPray() {
+    const hero = this.selectedHeroes[0];
+    // 回复 40% 最大生命
+    const healAmount = Math.floor(hero.maxHp * 0.4);
+    hero.hp = Math.min(hero.maxHp, hero.hp + healAmount);
+    this.ui.showEvent(
+      "✨ Sacred Healing",
+      `You feel blessed，+ ${healAmount} HP`,
+      "Continue",
+      null,
+      () => {}
+    );
+  }
   // ── 英雄工厂 ─────────────────────────────────────────────
 
   _createHeroFromData(data) {

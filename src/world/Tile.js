@@ -10,6 +10,7 @@ export const TileContentType = {
   DUNGEON: 'dungeon',
   BOSS: 'boss',
   TREASURE: 'treasure',
+  ALTAR: 'altar', 
 };
 
 export function makeDungeon(name, level = 1, difficulty = 'NORMAL') {
@@ -24,11 +25,20 @@ export function makeTreasure(lootTier = 1) {
   const tierName = ['', '普通宝箱', '稀有宝箱', '史诗宝箱'][lootTier] ?? '普通宝箱';
   return { type: TileContentType.TREASURE, name: tierName, lootTier };
 }
+export function makeAltar(level = 1) {
+  return {
+    type: TileContentType.ALTAR,
+    name: "神秘祭坛",
+    level
+  };
+}
 
 const CONTENT_COLORS = {
   [TileContentType.DUNGEON]: '#9400d3',
   [TileContentType.BOSS]: '#ff2222',
   [TileContentType.TREASURE]: '#ffd700',
+  [TileContentType.ALTAR]: '#00ffff',
+
 };
 
 export class Tile {
@@ -101,6 +111,8 @@ export class Tile {
         ctx.lineTo(x, y + iconR);
         ctx.lineTo(x - iconR, y);
         ctx.closePath();
+      } else if (this.content.type === TileContentType.ALTAR){
+        ctx.fillText('✦', x, y); 
       } else if (this.content.type === TileContentType.BOSS) {
         ctx.arc(x, y, iconR, 0, Math.PI * 2);
       } else {

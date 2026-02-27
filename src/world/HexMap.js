@@ -1,7 +1,7 @@
 // src/world/HexMap.js
 import { Tile, TileType } from './Tile.js';
 import { SeededRandom } from '../utils/SeededRandom.js';
-import { makeDungeon, makeTreasure } from './Tile.js';
+import { makeDungeon, makeTreasure, makeAltar } from './Tile.js';
 
 export class HexMap {
   constructor(radius, tileSize = 30, seed = SeededRandom.randomSeed()) {
@@ -112,8 +112,10 @@ export class HexMap {
       if (tile.type.id === 2) return; // 山脉不生成事件
   
       const roll = this.rng.next();
-  
-      if (roll > 0.95) {
+      if (roll > 0.97) {
+        tile.content = makeAltar(1);
+      }
+      else if (roll > 0.95) {
         tile.content = makeDungeon("地牢", 1);
       } 
       else if (roll > 0.90) {
