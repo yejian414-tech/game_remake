@@ -92,21 +92,22 @@ export class GameController {
 
   // ── 游戏循环钩子 ─────────────────────────────────────────
 
-  update(dt) {
-    const state = this.fsm.currentState;
+ // ── 游戏循环钩子 ─────────────────────────────────────────
 
-    if (state === GameState.MAP_EXPLORATION) {
-      this.player.update(dt);
-    } else if (state === GameState.COMBAT) {
-      if (this.combatManager) {
-        this.combatManager.update();
-        // ── 核心：每一帧同步数据给 React 刷新特效 ──
-        this.ui.updateCombatUI(this.combatManager);
-      }
-      this.selectedHeroes.forEach(h => h.update(dt));
-      this.combatManager?.enemies.forEach(e => e.update(dt));
-    }
-  }
+   update(dt) {
+     const state = this.fsm.currentState;
+
+     if (state === GameState.MAP_EXPLORATION) {
+       this.player.update(dt);
+     } else if (state === GameState.COMBAT) {
+       if (this.combatManager) {
+         this.combatManager.update();
+
+       }
+       this.selectedHeroes.forEach(h => h.update(dt));
+       this.combatManager?.enemies.forEach(e => e.update(dt));
+     }
+   }
 
   render(ctx, camera) {
     const state = this.fsm.currentState;

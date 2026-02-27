@@ -13,11 +13,9 @@ export class UIManager {
       hud: elements.hud,
       movementEl: elements.movementEl,
 
-      // ⚠️ 战斗系统的核心挂载点
       combatUI: elements.combatUI,
       reactCombatRoot: elements.reactCombatRoot || document.getElementById('react-combat-root'),
 
-      // 事件弹窗节点 (用于陷阱/祭坛等)
       eventUI: document.getElementById('event-ui'),
       eventTitle: document.getElementById('event-title'),
       eventDesc: document.getElementById('event-desc'),
@@ -27,7 +25,6 @@ export class UIManager {
     this.onCombatEnd = callbacks.onCombatEnd ?? (() => { });
   }
 
-  // ── 角色选择与地图生成 ─────────────────────────────────────────
   showCharacterSelect(onConfirm) {
     const { charSelectScreen, heroSlots, charConfirmBtn, charSelectedInfo } = this.els;
     charSelectScreen.style.display = 'flex';
@@ -63,7 +60,6 @@ export class UIManager {
   showMapGeneration(_heroes, onReady) { this.els.mapGenScreen.style.display = 'flex'; setTimeout(onReady, 1000); }
   hideMapGeneration() { this.els.mapGenScreen.style.display = 'none'; }
 
-  // ── HUD 与 进度条 ──────────────────────────────────────────────
   showMapUI() {
     this.els.hud.style.display = 'flex';
     const top = document.getElementById('top-progress');
@@ -83,14 +79,10 @@ export class UIManager {
     bar.classList.toggle('danger', turn >= maxTurns - 3);
   }
 
-  // ── 3. 战斗界面缝合 (完美对接 React) ───────────────────────────
-
   showCombatOverlay(combatManager) {
-    // 开启战斗界面容器
     if (this.els.combatUI) this.els.combatUI.style.display = 'block';
     if (this.els.reactCombatRoot) this.els.reactCombatRoot.style.display = 'block';
 
-    // 隐藏基础 HUD
     this.els.hud.style.display = 'none';
     const top = document.getElementById('top-progress');
     if (top) top.style.display = 'none';
@@ -104,21 +96,17 @@ export class UIManager {
 
     this.els.hud.style.display = 'flex';
 
-    // 恢复顶部进度条
     const top = document.getElementById('top-progress');
     if (top) top.style.display = 'flex';
 
-    // ⚠️ 极其关键：卸载 React，释放内存，防止下次进战斗状态残留
     if (window.unmountCombatUI) {
       window.unmountCombatUI(this.els.reactCombatRoot);
     }
   }
 
-  /** 将 CombatManager 的数据深度打包，推送到 React */
   updateCombatUI(combatManager) {
     if (!combatManager || !window.renderCombatUI) return;
 
-    // ⚠️ 深度构造快照：过滤掉为 null 的空技能槽，防止 React 渲染报错
     const stateSnapshot = {
       heroes: combatManager.heroes.map(h => ({
           ...h,
@@ -135,7 +123,6 @@ export class UIManager {
       diceInfo: combatManager.diceInfo
     };
 
-    // 回调映射
     const callbacks = {
       onStartBattle: () => {
         if(combatManager.startGame) combatManager.startGame();
@@ -149,16 +136,22 @@ export class UIManager {
       onFinishCombat: () => this.onCombatResult(combatManager.phase === 'WIN' ? 'win' : 'lose')
     };
 
-    // 执行 React 渲染 (注意兼容参数传递)
-    window.renderCombatUI(this.els.reactCombatRoot || 'react-combat-root', stateSnapshot, callbacks);
+    // ⚠️ 关键修复：直接传递字符串 ID 给 React
+    window.renderCombatUI('react-combat-root', stateSnapshot, callbacks);
   }
 
   onCombatResult(result) {
     this.onCombatEnd(result);
   }
-  // ── 4. 事件弹窗 ─────────────────────────────
+
   showEvent(title, desc, buttons = []) {
     const { eventUI, eventTitle, eventDesc, eventButtons } = this.els;
+
+    if (!eventUI) {
+      console.warn("未找到 eventUI DOM 节点，无法显示事件弹窗。");
+      return;
+    }
+
     eventUI.style.display = 'flex';
     eventTitle.innerText = title;
     eventDesc.innerText = desc;
@@ -167,6 +160,8 @@ export class UIManager {
     buttons.forEach(btn => {
       const button = document.createElement('button');
       button.innerText = btn.text;
+      button.style.cssText = "background: #e67e22; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;";
+
       button.onclick = () => {
         eventUI.style.display = 'none';
         if (btn.onClick) btn.onClick();
@@ -175,5 +170,14 @@ export class UIManager {
     });
   }
 
-  hideEvent() { this.els.eventUI.style.display = 'none'; }
+  hideEvent() {
+    if(this.els.eventUI) this.els.eventUI.style.display = 'none';
+  }
+  onCombatResult(result) {
+      // 1. 关闭战斗画面，恢复地图 HUD
+      this.hideCombatOverlay();
+
+      // 2. 把结果（'win' 或 'lose'）告诉 main.js
+      this.onCombatEnd(result);
+    }
 }

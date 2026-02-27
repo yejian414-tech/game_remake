@@ -169,7 +169,23 @@
     .p3 { width: 5px; height: 5px; left: 40%; top: 40%; animation-delay: 4s; }
     .p4 { width: 2px; height: 2px; left: 80%; top: 20%; animation-delay: 1s; }
     @keyframes float { 0% { transform: translateY(0) translateX(0); opacity: 0; } 20% { opacity: 0.8; } 80% { opacity: 0.8; } 100% { transform: translateY(-100px) translateX(20px); opacity: 0; } }
+/* 🧊 冰冻特效：蓝色寒气结冰动画 */
+    .frozen-effect {
+      position: absolute;
+      inset: 0;
+      z-index: 40;
+      border-radius: 0.5rem;
+      pointer-events: none;
+      background: rgba(135, 206, 235, 0.5); /* 冰蓝色半透明背景 */
+      box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.8), 0 0 10px rgba(176, 224, 230, 0.8);
+      border: 2px solid rgba(176, 224, 230, 0.9);
+      animation: freeze-pulse 1.5s infinite;
+    }
 
+    @keyframes freeze-pulse {
+      0%, 100% { opacity: 0.6; backdrop-filter: blur(1px); }
+      50% { opacity: 1; backdrop-filter: blur(3px); }
+    }
     /* ── 进度条危险动画 ── */
     @keyframes pulse-red {
 
