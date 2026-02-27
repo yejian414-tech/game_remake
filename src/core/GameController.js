@@ -19,6 +19,7 @@ export class GameController {
     this.selectedHeroes = [];
     this.combatManager = null;
     this.turnCount = 0;
+    this.trapCooldown = 0;
 
     this.fsm = new StateMachine(GameState.INITIALIZING);
     this._setupStates();
@@ -142,6 +143,10 @@ export class GameController {
       `[Turn ${this.turnCount}] 移动力判定 ${formatRoll(result)}` +
       ` | 装备+${equipBonus} → 合计 ${total}`
     );
+    //陷阱冷却
+    if (this.trapCooldown > 0) {
+      this.trapCooldown--;
+    }
   }
 
   onEndTurnBtnClick() { this._startTurn(); }
@@ -174,48 +179,45 @@ export class GameController {
   }
   // ── 玩家事件 ─────────────────────────────────────────────
   _handleTileContent(tile) {
-    if (!tile.content){
-       // 20% 概率触发
-      if (Math.random() <= 0.15) {
+    if (!tile.content) {
+      //触发概率
+      if (this.trapCooldown === 0 && Math.random() <= 0.15) {
+        this.trapCooldown = 2;
         const hero = this.selectedHeroes[0];
         this.ui.showEvent(
           "🪤 Hidden Trap",
-          "A hidden trap clicks beneath your feet",
-          "🎲 Roll The Dice",
-          null,
-          () => {
-            const result = rollSpeed(hero, 0.5, 20);
-            // 把 0~20 映射成 1~6
-            const diceValue = Math.max(1, Math.min(6, Math.ceil(result.sampleRoll / 20 * 6)));
-            this.ui.showEvent(
-              "🎲 Dice Result",
-              `Your roll a ${diceValue} .
-               Roll 2 or less - pain included`,
-              "continue",
-              null,
-              () => {
+          "A hidden trap clicks beneath your feet.",
+          [
+            {
+              text: "🎲 Roll The Dice",
+              onClick: () => {
+                const result = rollSpeed(hero, 0.5, 20);
+                const diceValue = Math.max(
+                  1,
+                  Math.min(6, Math.ceil(result.sampleRoll / 20 * 6))
+                );
                 if (diceValue <= 2) {
                   const damage = Math.floor(hero.maxHp * 0.15);
                   hero.hp = Math.max(0, hero.hp - damage);
                   this.ui.showEvent(
-                    "🪤 You're Hit",
-                    `Too fail，you take ${damage} damage！`,
-                    "continue",
-                    null,
-                    () => {}
+                    "💥 Trap Triggered",
+                    `You rolled ${diceValue}. You take ${damage} damage!`,
+                    [
+                      { text: "OK", onClick: () => {} }
+                    ]
                   );
                 } else {
                   this.ui.showEvent(
-                    "🪤 Trap Avoided",
-                    "Close one.You're safe",
-                    "Continue",
-                    null,
-                    () => {}
+                    "✨ Safe",
+                    `You rolled ${diceValue}. You avoided the trap.`,
+                    [
+                      { text: "OK", onClick: () => {} }
+                    ]
                   );
                 }
               }
-            );
-          }
+            }
+          ]
         );
       }
       return;
@@ -231,27 +233,33 @@ export class GameController {
         this.ui.showEvent(
           title,
           desc,
-          "⚔️ For the treasure！",
-          "🏃 Rapid backward advance",
-          () => {
-            tile.content = null;  // 选择战斗才移除内容
-            this.fsm.transition(GameState.COMBAT, content);
-          },
-          () => {
-            console.log("选择逃跑");
-            // 逃跑惩罚
-            this.player.movementPoints = 0;
-            this.ui.updateMovementUI(0);
-            console.log("你仓皇逃跑，失去了剩余行动力！");
-            this.ui.showEvent(
-              "🏃 you bolt from battle",
-              "Overcome by fear,leaving no strength to act",
-              "Confirm",
-              "",
-              () => {},
-              null
-            );
-          }
+          [
+            {
+              text: "⚔️ For the treasure！",
+              onClick: () => {
+                tile.content = null;
+                this.fsm.transition(GameState.COMBAT, content);
+              }
+            },
+            {
+              text: "🏃 Rapid backward advance",
+              onClick: () => {
+                this.player.movementPoints = 0;
+                this.ui.updateMovementUI(0);
+        
+                this.ui.showEvent(
+                  "🏃 you bolt from battle",
+                  "Overcome by fear, leaving no strength to act",
+                  [
+                    {
+                      text: "Confirm",
+                      onClick: () => {}
+                    }
+                  ]
+                );
+              }
+            }
+          ]
         );
       }else if (content.type === TileContentType.TREASURE) {
         tile.content = null;
@@ -259,46 +267,115 @@ export class GameController {
         this.ui.showEvent(
           "🎁 Treasure? Ahead",
           "Probably safe",
-          "open",
-          "Not today",
-          () => {
-            console.log("获得奖励！");
-            // 奖励逻辑
-          },
-          () => {
-            console.log("你选择离开。");
-          }
+          [
+            {
+              text: "Open",
+              onClick: () => {
+                console.log("获得奖励！");
+                tile.content = null;
+              }
+            },
+            {
+              text: "Not today",
+              onClick: () => {
+                console.log("你选择离开。");
+              }
+            }
+          ]
         );
       console.log(`[Treasure] 拾取 ${content.name}（Tier ${content.lootTier}）`);
       }else if (content.type === TileContentType.ALTAR) {
         this.ui.showEvent(
           "🔮 Mysterious Altar",
-          "An ancient alter stands before you.",
-          "🙏 Offer Prayer",
-          "🚶 Walk Away Quietly",
-          () => {
-            tile.content = null;
-            this._handleAltarPray();
-          },
-          () => {
-            console.log("你选择离开祭坛");
-          }
+          "An ancient altar stands before you.",
+          [
+            {
+              text: "🙏 Offer Prayer",
+              onClick: () => {
+                tile.content = null;
+                this._handleAltarPray();
+              }
+            },
+            {
+              text: "🚶 Walk Away Quietly",
+              onClick: () => {}
+            }
+          ]
         );
-      }
+      }else if (content.type === TileContentType.LIGHTHOUSE) {
+        this.ui.showEvent(
+          "🗼 Lighthouse",
+          "Choose a direction",
+          [
+            {
+              text: "North",
+              onClick: () => {
+                this._revealDirection(0, -1);
+                tile.content = null;
+              }
+            },
+            {
+              text: "South",
+              onClick: () => {
+                this._revealDirection(0, 1);
+                tile.content = null;
+              }
+            },
+            {
+              text: "East",
+              onClick: () => {
+                this._revealDirection(1, 0);
+                tile.content = null;
+              }
+            },
+            {
+              text: "West",
+              onClick: () => {
+                this._revealDirection(-1, 0);
+                tile.content = null;
+              }
+            }
+          ]
+        );
+     }
   }
 // ── 祭坛事件扩展 ─────────────────────────────────────────────
-    _handleAltarPray() {
+  _handleAltarPray() {
     const hero = this.selectedHeroes[0];
-    // 回复 40% 最大生命
     const healAmount = Math.floor(hero.maxHp * 0.4);
     hero.hp = Math.min(hero.maxHp, hero.hp + healAmount);
     this.ui.showEvent(
       "✨ Sacred Healing",
-      `You feel blessed，+ ${healAmount} HP`,
-      "Continue",
-      null,
-      () => {}
+      `You feel blessed, +${healAmount} HP`,
+      [
+        {
+          text: "Continue",
+          onClick: () => {}
+        }
+      ]
     );
+  }
+// ── 灯塔事件扩展 ─────────────────────────────────────────────
+    _revealDirection(dq, dr) {
+    const originQ = this.player.q;
+    const originR = this.player.r;
+    const depth = 5;
+    const width = 2;
+    for (let i = 1; i <= depth; i++) {
+      const centerQ = originQ + dq * i;
+      const centerR = originR + dr * i;
+      for (let w = -width; w <= width; w++) {
+        let q = centerQ;
+        let r = centerR;
+        if (dq !== 0) {
+          r += w;
+        } else {
+          q += w;
+        }
+        const tile = this.map.getTile(q, r);
+        if (tile) tile.isRevealed = true;
+      }
+    }
   }
   // ── 英雄工厂 ─────────────────────────────────────────────
 

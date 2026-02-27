@@ -11,6 +11,7 @@ export const TileContentType = {
   BOSS: 'boss',
   TREASURE: 'treasure',
   ALTAR: 'altar', 
+  LIGHTHOUSE: 'lighthouse',
 };
 
 export function makeDungeon(name, level = 1, difficulty = 'NORMAL') {
@@ -32,13 +33,20 @@ export function makeAltar(level = 1) {
     level
   };
 }
+export function makeLighthouse(level = 1) {
+  return {
+    type: TileContentType.LIGHTHOUSE,
+    name: "Ancient Lighthouse",
+    level
+  };
+}
 
 const CONTENT_COLORS = {
   [TileContentType.DUNGEON]: '#9400d3',
   [TileContentType.BOSS]: '#ff2222',
   [TileContentType.TREASURE]: '#ffd700',
   [TileContentType.ALTAR]: '#00ffff',
-
+  [TileContentType.LIGHTHOUSE]: '#ffcc00',
 };
 
 export class Tile {
