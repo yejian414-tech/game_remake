@@ -15,6 +15,11 @@ export class UIManager {
       // turnCountEl 已移除，由顶部进度条接管
       combatUI: elements.combatUI,
       skillPanel: elements.skillPanel,
+      eventUI: document.getElementById('event-ui'),
+      eventTitle: document.getElementById('event-title'),
+      eventDesc: document.getElementById('event-desc'),
+      eventBtn1: document.getElementById('event-btn-1'),
+      eventBtn2: document.getElementById('event-btn-2'),
     };
 
     // ── 回调（由 GameController 注入）────────────────────────
@@ -147,5 +152,29 @@ export class UIManager {
   onCombatResult(result) {
     alert(result === 'win' ? '战斗胜利！' : '不幸阵亡...');
     this.onCombatEnd(result);
+  }
+  showEvent(title, desc, btn1Text, btn2Text, onBtn1, onBtn2) {
+    const { eventUI, eventTitle, eventDesc, eventBtn1, eventBtn2 } = this.els;
+  
+    eventUI.style.display = 'flex';
+    eventTitle.innerText = title;
+    eventDesc.innerText = desc;
+  
+    eventBtn1.innerText = btn1Text;
+    eventBtn2.innerText = btn2Text;
+  
+    eventBtn1.onclick = () => {
+      eventUI.style.display = 'none';
+      onBtn1?.();
+    };
+  
+    eventBtn2.onclick = () => {
+      eventUI.style.display = 'none';
+      onBtn2?.();
+    };
+  }
+  
+  hideEvent() {
+    this.els.eventUI.style.display = 'none';
   }
 }

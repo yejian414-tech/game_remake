@@ -178,13 +178,53 @@ export class GameController {
     const content = tile.content;
 
     if (content.type === TileContentType.DUNGEON || content.type === TileContentType.BOSS) {
-      tile.content = null;
-      this.fsm.transition(GameState.COMBAT, content);
-
-    } else if (content.type === TileContentType.TREASURE) {
+        const isBoss = content.type === TileContentType.BOSS;
+        const title = isBoss ? "⚠️ Boss 出现！" : "⚔️ Facing敌人";
+        const desc = isBoss
+          ? `你遭遇了强大的 ${content.name}，要迎战吗？`
+          : `Ahead is a ${content.name}（Lv.${content.level}），Do you want to fight？`;
+      
+        this.ui.showEvent(
+          title,
+          desc,
+          "⚔️ For the treasure！",
+          "🏃 Rapid backward advance",
+          () => {
+            tile.content = null;  // 选择战斗才移除内容
+            this.fsm.transition(GameState.COMBAT, content);
+          },
+          () => {
+            console.log("选择逃跑");
+            // 逃跑惩罚
+            this.player.movementPoints = 0;
+            this.ui.updateMovementUI(0);
+            console.log("你仓皇逃跑，失去了剩余行动力！");
+            this.ui.showEvent(
+              "🏃 you bolt from battle",
+              "Overcome by fear,leaving no strength to act",
+              "Confirm",
+              "",
+              () => {},
+              null
+            );
+          }
+        );
+      }else if (content.type === TileContentType.TREASURE) {
       tile.content = null;
       const tierLabel = ['', '普通', '稀有', '史诗'][content.lootTier] ?? '普通';
-      alert(`🎁 获得 ${tierLabel} 宝箱奖励！（Tier ${content.lootTier}）`);
+      this.ui.showEvent(
+        "🎁 Treasure? Ahead",
+        "Probably safe",
+        "open",
+        "Not today",
+        () => {
+          console.log("获得奖励！");
+          // 奖励逻辑
+        },
+        () => {
+          console.log("你选择离开。");
+        }
+      );
       console.log(`[Treasure] 拾取 ${content.name}（Tier ${content.lootTier}）`);
     }
   }

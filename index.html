@@ -230,6 +230,31 @@
   <div id="combat-ui">
     <div id="skill-panel"></div>
   </div>
+  <!-- ── 事件弹窗 ── -->
+  <div id="event-ui" style="
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+  ">
+    <div style="
+      background: #2c2c54;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      min-width: 300px;
+    ">
+      <h3 id="event-title">事件标题</h3>
+      <p id="event-desc">事件描述</p>
+      <div style="margin-top:20px;">
+        <button id="event-btn-1">按钮1</button>
+        <button id="event-btn-2">按钮2</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="./main.js"></script>
 </body>
