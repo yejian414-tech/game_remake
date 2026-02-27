@@ -308,31 +308,31 @@ export class GameController {
           "Choose a direction",
           [
             {
-              text: "North",
+              text: "右上",
               onClick: () => {
-                this._revealDirection(0, -1);
                 tile.content = null;
+                this._revealDirection(1, -1);
               }
             },
             {
-              text: "South",
+              text: "右下",
               onClick: () => {
-                this._revealDirection(0, 1);
                 tile.content = null;
+                this._revealDirection(1, 1);
               }
             },
             {
-              text: "East",
+              text: "左下",
               onClick: () => {
-                this._revealDirection(1, 0);
                 tile.content = null;
+                this._revealDirection(-1, 1);
               }
             },
             {
-              text: "West",
+              text: "左上",
               onClick: () => {
-                this._revealDirection(-1, 0);
                 tile.content = null;
+                this._revealDirection(-1, -1);
               }
             }
           ]
@@ -356,27 +356,34 @@ export class GameController {
     );
   }
 // ── 灯塔事件扩展 ─────────────────────────────────────────────
-    _revealDirection(dq, dr) {
-    const originQ = this.player.q;
-    const originR = this.player.r;
-    const depth = 5;
-    const width = 2;
-    for (let i = 1; i <= depth; i++) {
-      const centerQ = originQ + dq * i;
-      const centerR = originR + dr * i;
-      for (let w = -width; w <= width; w++) {
-        let q = centerQ;
-        let r = centerR;
-        if (dq !== 0) {
-          r += w;
-        } else {
-          q += w;
-        }
-        const tile = this.map.getTile(q, r);
-        if (tile) tile.isRevealed = true;
+ _revealDirection(dirQ, dirR) {
+  const originQ = this.player.q;
+  const originR = this.player.r;
+  const radius = 6;   // 揭示距离
+  for (let dq = -radius; dq <= radius; dq++) {
+    for (let dr = -radius; dr <= radius; dr++) {
+      const dist = Math.max(
+        Math.abs(dq),
+        Math.abs(dr),
+        Math.abs(dq + dr)
+      );
+      if (dist > radius) continue;
+      const q = originQ + dq;
+      const r = originR + dr;
+      const tile = this.map.getTile(q, r);
+      if (!tile) continue;
+      // 判断方向象限（X 型四分法）
+      const inDirection =
+        (dirQ ===  1 && dirR === -1 && dq > 0 && dr < 0) ||  // 右上
+        (dirQ ===  1 && dirR ===  1 && dq > 0 && dr > 0) ||  // 右下
+        (dirQ === -1 && dirR ===  1 && dq < 0 && dr > 0) ||  // 左下
+        (dirQ === -1 && dirR === -1 && dq < 0 && dr < 0);    // 左上
+      if (inDirection) {
+        tile.isRevealed = true;
       }
     }
   }
+}
   // ── 英雄工厂 ─────────────────────────────────────────────
 
   _createHeroFromData(data) {
