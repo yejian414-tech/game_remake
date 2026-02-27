@@ -4,6 +4,11 @@
 <head>
   <meta charset="UTF-8" />
   <title>为了宝藏 - 统一架构版</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -139,37 +144,31 @@
     }
 
     /* 战斗专用指令层 */
-    #combat-ui {
-      position: fixed;
-      inset: 0;
-      display: none;
-      pointer-events: none;
-      z-index: 100;
-    }
+    /* ====== 新增：战斗界面的动效 CSS ====== */
+    .animate-spin-slow { animation: spin 0.5s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #292524; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #57534e; border-radius: 4px; }
 
-    #skill-panel {
-      position: absolute;
-      bottom: 50px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-      pointer-events: auto;
-    }
+    .animate-bounce-short { animation: bounce-short 1s ease-in-out forwards; }
+    @keyframes bounce-short { 0%, 100% { transform: translateY(0); opacity: 0; } 20% { transform: translateY(-20px) scale(1.2); opacity: 1; } 80% { opacity: 1; } }
 
-    .skill-btn {
-      background: #e67e22;
-      padding: 12px 24px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      border: none;
-      color: white;
-    }
+    .shake-effect { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+    @keyframes shake { 10%, 90% { transform: translate3d(-3px, 0, 0) rotate(-1deg); } 20%, 80% { transform: translate3d(4px, 0, 0) rotate(1deg); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0) rotate(-2deg); } 40%, 60% { transform: translate3d(6px, 0, 0) rotate(2deg); } }
 
-    .skill-btn:hover {
-      background: #cf6d17;
-    }
+    .slash-effect { position: absolute; inset: 0; z-index: 40; border-radius: 0.5rem; pointer-events: none; background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.9) 48%, rgba(220,38,38,0.7) 50%, transparent 55%); background-size: 200% 200%; animation: slash 0.3s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
+    @keyframes slash { 0% { background-position: 200% 0; opacity: 0; } 50% { opacity: 1; } 100% { background-position: -50% 100%; opacity: 0; } }
+
+    .heal-effect { position: absolute; inset: 0; z-index: 40; border-radius: 0.5rem; pointer-events: none; background: radial-gradient(circle, rgba(74,222,128,0.5) 0%, transparent 70%); animation: pulse-heal 0.6s ease-out forwards; }
+    @keyframes pulse-heal { 0% { transform: scale(0.5); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
+
+    .particle { position: absolute; background: rgba(255, 180, 100, 0.4); border-radius: 50%; filter: blur(1px); animation: float 10s infinite ease-in-out; }
+    .p1 { width: 4px; height: 4px; left: 20%; top: 80%; animation-delay: 0s; }
+    .p2 { width: 3px; height: 3px; left: 70%; top: 60%; animation-delay: 2s; }
+    .p3 { width: 5px; height: 5px; left: 40%; top: 40%; animation-delay: 4s; }
+    .p4 { width: 2px; height: 2px; left: 80%; top: 20%; animation-delay: 1s; }
+    @keyframes float { 0% { transform: translateY(0) translateX(0); opacity: 0; } 20% { opacity: 0.8; } 80% { opacity: 0.8; } 100% { transform: translateY(-100px) translateX(20px); opacity: 0; } }
 
     /* ── 进度条危险动画 ── */
     @keyframes pulse-red {
@@ -191,45 +190,45 @@
 </head>
 
 <body>
-  <canvas id="game-canvas"></canvas>
+<canvas id="game-canvas"></canvas>
 
-  <!-- ── 顶部回合进度条 ── -->
-  <div id="top-progress">
-    <div id="top-progress-header">
-      <span class="label">💀 最终 Boss 倒计时</span>
-      <span class="turn-label">回合 <span id="turn-progress-text">0/20</span></span>
-    </div>
-    <div id="turn-progress-track">
-      <div id="turn-progress-bar"></div>
-    </div>
+<!-- ── 顶部回合进度条 ── -->
+<div id="top-progress">
+  <div id="top-progress-header">
+    <span class="label">💀 最终 Boss 倒计时</span>
+    <span class="turn-label">回合 <span id="turn-progress-text">0/20</span></span>
   </div>
+  <div id="turn-progress-track">
+    <div id="turn-progress-bar"></div>
+  </div>
+</div>
 
-  <!-- ── 角色选择 ── -->
-  <div id="char-select-screen" class="fullscreen">
-    <h2 style="margin-bottom:20px; color:#f39c12;">选择你的英雄</h2>
-    <div id="hero-slots"></div>
-    <div id="char-selected-info" style="margin-bottom:20px; color:#aaa;">请选择 2 名英雄</div>
-    <button id="char-confirm-btn" disabled>开始冒险</button>
-  </div>
+<!-- ── 角色选择 ── -->
+<div id="char-select-screen" class="fullscreen">
+  <h2 style="margin-bottom:20px; color:#f39c12;">选择你的英雄</h2>
+  <div id="hero-slots"></div>
+  <div id="char-selected-info" style="margin-bottom:20px; color:#aaa;">请选择 2 名英雄</div>
+  <button id="char-confirm-btn" disabled>开始冒险</button>
+</div>
 
-  <!-- ── 地图生成 ── -->
-  <div id="map-gen-screen" class="fullscreen">
-    <h2>正在构建世界...</h2>
-  </div>
+<!-- ── 地图生成 ── -->
+<div id="map-gen-screen" class="fullscreen">
+  <h2>正在构建世界...</h2>
+</div>
 
-  <!-- ── 底部 HUD（仅保留行动力 + 结束回合）── -->
-  <div id="hud">
-    <span id="movement-points">行动力：-</span>
-    <button id="end-turn-btn"
-      style="background:#e67e22; border:none; color:white; padding:6px 16px; border-radius:4px; cursor:pointer;">
-      结束回合
-    </button>
-  </div>
+<!-- ── 底部 HUD（仅保留行动力 + 结束回合）── -->
+<div id="hud">
+  <span id="movement-points">行动力：-</span>
+  <button id="end-turn-btn"
+          style="background:#e67e22; border:none; color:white; padding:6px 16px; border-radius:4px; cursor:pointer;">
+    结束回合
+  </button>
+</div>
 
-  <!-- ── 战斗界面 ── -->
-  <div id="combat-ui">
-    <div id="skill-panel"></div>
-  </div>
+
+<div id="react-combat-root" style="display: none; position: fixed; inset: 0; z-index: 100;"></div>
+<script type="module" src="./main.js"></script>
+<script type="text/babel" src="src/ui/CombatUI.js"></script>
   <!-- ── 事件弹窗 ── -->
   <div id="event-ui" style="
     position: fixed;

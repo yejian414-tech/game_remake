@@ -3,7 +3,7 @@ import { DataLoader } from '../data/DataLoader.js';
 
 export class UIManager {
   constructor(elements, callbacks = {}) {
-    // ── DOM 元素 ─────────────────────────────────────────────
+    // ── 1. 结构化 DOM 元素 ──────────────────────────────────────────
     this.els = {
       charSelectScreen: elements.charSelectScreen,
       heroSlots: elements.heroSlots,
@@ -12,26 +12,26 @@ export class UIManager {
       mapGenScreen: elements.mapGenScreen,
       hud: elements.hud,
       movementEl: elements.movementEl,
-      // turnCountEl 已移除，由顶部进度条接管
+
+      // ⚠️ 战斗系统的核心挂载点
       combatUI: elements.combatUI,
-      skillPanel: elements.skillPanel,
+      reactCombatRoot: elements.reactCombatRoot || document.getElementById('react-combat-root'),
+
+      // 事件弹窗节点 (用于陷阱/祭坛等)
       eventUI: document.getElementById('event-ui'),
       eventTitle: document.getElementById('event-title'),
       eventDesc: document.getElementById('event-desc'),
       eventButtons: document.getElementById('event-buttons'),
     };
 
-    // ── 回调（由 GameController 注入）────────────────────────
     this.onCombatEnd = callbacks.onCombatEnd ?? (() => { });
   }
 
-  // ── 角色选择界面 ─────────────────────────────────────────
-
+  // ── 角色选择与地图生成 ─────────────────────────────────────────
   showCharacterSelect(onConfirm) {
     const { charSelectScreen, heroSlots, charConfirmBtn, charSelectedInfo } = this.els;
     charSelectScreen.style.display = 'flex';
     heroSlots.innerHTML = '';
-
     const selected = [];
 
     DataLoader.getAllHeroes().forEach(hero => {
@@ -56,130 +56,124 @@ export class UIManager {
       };
       heroSlots.appendChild(card);
     });
-
     charConfirmBtn.onclick = () => onConfirm([...selected]);
   }
 
-  hideCharacterSelect() {
-    this.els.charSelectScreen.style.display = 'none';
-  }
+  hideCharacterSelect() { this.els.charSelectScreen.style.display = 'none'; }
+  showMapGeneration(_heroes, onReady) { this.els.mapGenScreen.style.display = 'flex'; setTimeout(onReady, 1000); }
+  hideMapGeneration() { this.els.mapGenScreen.style.display = 'none'; }
 
-  // ── 地图生成过渡界面 ─────────────────────────────────────
-
-  showMapGeneration(_heroes, onReady) {
-    this.els.mapGenScreen.style.display = 'flex';
-    setTimeout(onReady, 1000);
-  }
-
-  hideMapGeneration() {
-    this.els.mapGenScreen.style.display = 'none';
-  }
-
-  // ── HUD ──────────────────────────────────────────────────
-
+  // ── HUD 与 进度条 ──────────────────────────────────────────────
   showMapUI() {
     this.els.hud.style.display = 'flex';
-
-    // 同时显示顶部进度条
     const top = document.getElementById('top-progress');
     if (top) top.style.display = 'flex';
   }
 
-  updateMovementUI(points) {
-    this.els.movementEl.textContent = `行动力：${points}`;
-  }
+  updateMovementUI(points) { this.els.movementEl.textContent = `行动力：${points}`; }
+  updateTurnCount(_turn) {}
 
-  /** 保留签名兼容 GameController，但回合号现在只显示在顶部进度条里 */
-  updateTurnCount(_turn) {
-    // 已由 updateProgressBar 统一更新，此处留空即可
-  }
-
-  /**
-   * 更新顶部回合进度条
-   * @param {number} turn      当前回合
-   * @param {number} maxTurns  最大回合数
-   */
   updateProgressBar(turn, maxTurns) {
     const bar = document.getElementById('turn-progress-bar');
     const text = document.getElementById('turn-progress-text');
     if (!bar) return;
-
     const pct = Math.min(100, Math.round(turn / maxTurns * 100));
     bar.style.width = `${pct}%`;
     if (text) text.textContent = `${turn}/${maxTurns}`;
-
-    // 最后 3 回合红色脉冲警告
     bar.classList.toggle('danger', turn >= maxTurns - 3);
   }
 
-  // ── 战斗界面 ─────────────────────────────────────────────
+  // ── 3. 战斗界面缝合 (完美对接 React) ───────────────────────────
 
-  showCombatOverlay() {
-    this.els.combatUI.style.display = 'block';
+  showCombatOverlay(combatManager) {
+    // 开启战斗界面容器
+    if (this.els.combatUI) this.els.combatUI.style.display = 'block';
+    if (this.els.reactCombatRoot) this.els.reactCombatRoot.style.display = 'block';
+
+    // 隐藏基础 HUD
     this.els.hud.style.display = 'none';
+    const top = document.getElementById('top-progress');
+    if (top) top.style.display = 'none';
+
+    this.updateCombatUI(combatManager);
   }
 
   hideCombatOverlay() {
-    this.els.combatUI.style.display = 'none';
+    if (this.els.combatUI) this.els.combatUI.style.display = 'none';
+    if (this.els.reactCombatRoot) this.els.reactCombatRoot.style.display = 'none';
+
     this.els.hud.style.display = 'flex';
+
+    // 恢复顶部进度条
+    const top = document.getElementById('top-progress');
+    if (top) top.style.display = 'flex';
+
+    // ⚠️ 极其关键：卸载 React，释放内存，防止下次进战斗状态残留
+    if (window.unmountCombatUI) {
+      window.unmountCombatUI(this.els.reactCombatRoot);
+    }
   }
 
-  /**
-   * 渲染技能按钮列表，点击后触发战斗行动。
-   * @param {object} hero     当前行动的英雄（需有 .id）
-   * @param {function} onAction  回调，参数为被选中的 skill 对象
-   */
-  showCombatCommands(hero, onAction) {
-    const { skillPanel } = this.els;
-    skillPanel.innerHTML = '';
+  /** 将 CombatManager 的数据深度打包，推送到 React */
+  updateCombatUI(combatManager) {
+    if (!combatManager || !window.renderCombatUI) return;
 
-    const skills = DataLoader.getHeroSkills(hero.id);
-    skills.forEach(skill => {
-      const btn = document.createElement('button');
-      btn.className = 'skill-btn';
-      btn.innerText = skill.name;
-      btn.title = skill.desc ?? '';
-      btn.onclick = () => onAction(skill);
-      skillPanel.appendChild(btn);
-    });
+    // ⚠️ 深度构造快照：过滤掉为 null 的空技能槽，防止 React 渲染报错
+    const stateSnapshot = {
+      heroes: combatManager.heroes.map(h => ({
+          ...h,
+          skills: h.skillSlots ? h.skillSlots.filter(s => s) : h.skills
+      })),
+      enemies: [...combatManager.enemies],
+      phase: combatManager.phase,
+      activeUnit: combatManager.activeUnit ? {
+          ...combatManager.activeUnit,
+          skills: combatManager.activeUnit.skillSlots ? combatManager.activeUnit.skillSlots.filter(s => s) : combatManager.activeUnit.skills
+      } : null,
+      turnOrder: [combatManager.activeUnit, ...combatManager.turnOrder].filter(Boolean),
+      logs: [...combatManager.logs],
+      diceInfo: combatManager.diceInfo
+    };
+
+    // 回调映射
+    const callbacks = {
+      onStartBattle: () => {
+        if(combatManager.startGame) combatManager.startGame();
+        else combatManager.phase = 'PLAYER_TURN';
+        this.updateCombatUI(combatManager);
+      },
+      onSkillSelect: (skill) => combatManager.selectSkill(skill),
+      onTargetSelect: (targetId) => combatManager.executePlayerAction(targetId),
+      onRollComplete: () => combatManager.applyDamage(),
+      onExecuteComplete: () => combatManager.evaluateTurn(),
+      onFinishCombat: () => this.onCombatResult(combatManager.phase === 'WIN' ? 'win' : 'lose')
+    };
+
+    // 执行 React 渲染 (注意兼容参数传递)
+    window.renderCombatUI(this.els.reactCombatRoot || 'react-combat-root', stateSnapshot, callbacks);
   }
 
-  /**
-   * 战斗结果回调——通知 GameController 切回探索状态。
-   * @param {'win'|'lose'} result
-   */
   onCombatResult(result) {
-    alert(result === 'win' ? '战斗胜利！' : '不幸阵亡...');
     this.onCombatEnd(result);
   }
+  // ── 4. 事件弹窗 ─────────────────────────────
   showEvent(title, desc, buttons = []) {
-  
     const { eventUI, eventTitle, eventDesc, eventButtons } = this.els;
-  
     eventUI.style.display = 'flex';
     eventTitle.innerText = title;
     eventDesc.innerText = desc;
-  
-    // 清空旧按钮
     eventButtons.innerHTML = '';
-  
+
     buttons.forEach(btn => {
       const button = document.createElement('button');
-  
       button.innerText = btn.text;
-  
       button.onclick = () => {
         eventUI.style.display = 'none';
-        if (btn.onClick) {
-          btn.onClick();
-        }
+        if (btn.onClick) btn.onClick();
       };
-  
       eventButtons.appendChild(button);
     });
   }
-  
-  hideEvent() {
-    this.els.eventUI.style.display = 'none';
-  }
+
+  hideEvent() { this.els.eventUI.style.display = 'none'; }
 }
