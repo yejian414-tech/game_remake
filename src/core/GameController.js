@@ -174,9 +174,53 @@ export class GameController {
   }
   // ── 玩家事件 ─────────────────────────────────────────────
   _handleTileContent(tile) {
-    if (!tile.content) return;
+    if (!tile.content){
+       // 20% 概率触发
+      if (Math.random() <= 0.15) {
+        const hero = this.selectedHeroes[0];
+        this.ui.showEvent(
+          "🪤 Hidden Trap",
+          "A hidden trap clicks beneath your feet",
+          "🎲 Roll The Dice",
+          null,
+          () => {
+            const result = rollSpeed(hero, 0.5, 20);
+            // 把 0~20 映射成 1~6
+            const diceValue = Math.max(1, Math.min(6, Math.ceil(result.sampleRoll / 20 * 6)));
+            this.ui.showEvent(
+              "🎲 Dice Result",
+              `Your roll a ${diceValue} .
+               Roll 2 or less - pain included`,
+              "continue",
+              null,
+              () => {
+                if (diceValue <= 2) {
+                  const damage = Math.floor(hero.maxHp * 0.15);
+                  hero.hp = Math.max(0, hero.hp - damage);
+                  this.ui.showEvent(
+                    "🪤 You're Hit",
+                    `Too fail，you take ${damage} damage！`,
+                    "continue",
+                    null,
+                    () => {}
+                  );
+                } else {
+                  this.ui.showEvent(
+                    "🪤 Trap Avoided",
+                    "Close one.You're safe",
+                    "Continue",
+                    null,
+                    () => {}
+                  );
+                }
+              }
+            );
+          }
+        );
+      }
+      return;
+    }
     const content = tile.content;
-
     if (content.type === TileContentType.DUNGEON || content.type === TileContentType.BOSS) {
         const isBoss = content.type === TileContentType.BOSS;
         const title = isBoss ? "⚠️ Boss 出现！" : "⚔️ Facing敌人";
