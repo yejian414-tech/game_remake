@@ -9,6 +9,7 @@ import { Player } from '../entities/Player.js';
 import { DataLoader } from '../data/DataLoader.js';
 import { rollSpeed } from './Dice.js';
 import { Renderer } from '../rendering/Renderer.js';
+import { rollRandomItem } from '../data/items.js';
 
 export class GameController {
   constructor(map, player, ui) {
@@ -50,7 +51,22 @@ export class GameController {
     });
     this.fsm.addState(GameState.COMBAT, {
       enter: contentData => this._enterCombat(contentData),
-      exit: () => { this._exitCombat(); this.ui.updatePartyStatus(this.selectedHeroes); },
+      exit: () => {
+        const won = this.combatManager?.phase === 'WIN';
+        this._exitCombat();
+        this.ui.updatePartyStatus(this.selectedHeroes);
+        if (won) {
+          const loot = rollRandomItem();
+          // 延迟一帧确保战斗 UI 已关闭
+          setTimeout(() => {
+            this.ui.showChestReward(loot, () => {
+              if (this.selectedHeroes.length > 0) {
+                this.selectedHeroes[0].inventory.push(loot);
+              }
+            });
+          }, 300);
+        }
+      },
     });
   }
 
@@ -139,8 +155,14 @@ export class GameController {
             { text: "🏃 撤退", onClick: () => { this.player.movementPoints = 0; this.ui.updateMovementUI(0); } }
         ]);
     } else if (content.type === TileContentType.TREASURE) {
-        tile.content = null;
-        this.ui.showEvent("🎁 宝箱", `获得战利品`, [{ text: "确定", onClick: () => {} }]);
+      tile.content = null;
+      const loot = rollRandomItem();
+      this.ui.showChestReward(loot, () => {
+        // 道具放入第一个英雄背包（后续可做选择）
+        if (this.selectedHeroes.length > 0) {
+          this.selectedHeroes[0].inventory.push(loot);
+        }
+      });
     } else if (content.type === TileContentType.ALTAR) {
         this.ui.showEvent("🔮 祭坛", "祈祷？", [{ text: "🙏 祈祷", onClick: () => { tile.content = null; this._handleAltarPray(); } }, { text: "🚶 离开", onClick: () => {} }]);
     } else if (content.type === TileContentType.LIGHTHOUSE) {

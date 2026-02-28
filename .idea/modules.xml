@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/game_remake.iml" filepath="$PROJECT_DIR$/.idea/game_remake.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/FTT.iml" filepath="$PROJECT_DIR$/.idea/FTT.iml" />
     </modules>
   </component>
 </project>

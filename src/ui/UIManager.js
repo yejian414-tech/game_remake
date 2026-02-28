@@ -1,5 +1,6 @@
 // src/ui/UIManager.js
 import { DataLoader } from '../data/DataLoader.js';
+import { ChestAnimation } from './ChestAnimation.js';
 
 export class UIManager {
   constructor(elements, callbacks = {}) {
@@ -173,5 +174,13 @@ export class UIManager {
       button.onclick = () => { eventUI.style.display = 'none'; if (btn.onClick) btn.onClick(); };
       eventButtons.appendChild(button);
     });
+  }
+  /**
+   * 播放开宝箱动画，结束后执行回调
+   * @param {object} item  道具对象
+   * @param {function} [onClose] 关闭回调
+   */
+  showChestReward(item, onClose) {
+    ChestAnimation.play(item, onClose ?? (() => {}));
   }
 }
