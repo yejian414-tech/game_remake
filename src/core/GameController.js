@@ -156,14 +156,9 @@ export class GameController {
         ]);
     }else if (content.type === TileContentType.TREASURE) {
       this.ui.showEvent(
-        "🎁 宝箱",
-        `发现 ${content.name}，要打开吗？`,
+        "🎁 宝箱",`发现 ${content.name}，要打开吗？`,
         [
-          {
-            text: "🎁 打开",
-            onClick: () => {
-              tile.content = null;
-              let loot;
+          { text: "🎁 打开", onClick: () => { tile.content = null; let loot;
               if (content.lootTier === 3) {
                   // 史诗必出史诗
                   loot = rollRandomItem();
@@ -203,19 +198,35 @@ export class GameController {
 
   _handleTrapEvent() {
     const hero = this.selectedHeroes[0];
-    this.ui.showEvent("🪤 陷阱", "踩到了机关！", [{
-        text: "🎲 逃脱",
-        onClick: () => {
-            const result = rollSpeed(hero, 0.5, 20);
-            const val = Math.max(1, Math.min(6, Math.ceil(result.sampleRoll / 20 * 6)));
-            if (val <= 2) {
-                const dmg = Math.floor(hero.maxHp * 0.15);
-                hero.hp = Math.max(0, hero.hp - dmg);
-                this.ui.updatePartyStatus(this.selectedHeroes);
-                this.ui.showEvent("💥 触发", `受到 ${dmg} 伤害`, [{ text: "确定", onClick: () => {} }]);
-            } else this.ui.showEvent("✨ 安全", `躲开了！`, [{ text: "确定", onClick: () => {} }]);
+    this.ui.showEvent("🪤 陷阱", "踩到了机关！准备摇骰子...", [
+      { text: "🎲 掷骰",  onClick: () => {
+          const result = rollSpeed(hero, 0.5, 20);
+          const val = Math.max(1, Math.min(6, Math.round(result.sampleRoll / 20 * 6)));
+          // 先显示骰子结果
+          this.ui.showEvent( "🎲 骰子结果",`你掷出了 ${val}！`,
+            [
+              { text: "继续", onClick: () => {
+                  if (val <= 3) {
+                    const dmg = Math.floor(hero.maxHp * 0.15);
+                    hero.hp = Math.max(0, hero.hp - dmg);
+                    this.ui.updatePartyStatus(this.selectedHeroes);
+                    this.ui.showEvent(
+                      "💥 触发陷阱",`受到 ${dmg} 点伤害！`,
+                      [{ text: "确定" }]
+                    );
+                  } else {
+                    this.ui.showEvent(
+                      "✨ 成功闪避","你躲开了陷阱！",
+                      [{ text: "确定" }]
+                    );
+                  }
+                }
+              }
+            ]
+          );
         }
-    }]);
+      }
+    ]);
   }
 
   _handleAltarPray() {
