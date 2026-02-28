@@ -3,7 +3,6 @@ import { DataLoader } from '../data/DataLoader.js';
 
 export class UIManager {
   constructor(elements, callbacks = {}) {
-    // ── 1. 结构化 DOM 元素 ──────────────────────────────────────────
     this.els = {
       charSelectScreen: elements.charSelectScreen,
       heroSlots: elements.heroSlots,
@@ -12,17 +11,59 @@ export class UIManager {
       mapGenScreen: elements.mapGenScreen,
       hud: elements.hud,
       movementEl: elements.movementEl,
-
       combatUI: elements.combatUI,
       reactCombatRoot: elements.reactCombatRoot || document.getElementById('react-combat-root'),
-
+      partyStatus: document.getElementById('party-status-overlay'),
       eventUI: document.getElementById('event-ui'),
       eventTitle: document.getElementById('event-title'),
       eventDesc: document.getElementById('event-desc'),
       eventButtons: document.getElementById('event-buttons'),
     };
-
     this.onCombatEnd = callbacks.onCombatEnd ?? (() => { });
+  }
+
+  // ── 修改：更新状态栏并绑定点击事件 ──
+  updatePartyStatus(heroes) {
+    if (!this.els.partyStatus) return;
+    this.els.partyStatus.style.display = 'flex';
+    this.els.partyStatus.innerHTML = '';
+
+    heroes.forEach(hero => {
+      const hpPct = Math.max(0, (hero.hp / hero.maxHp) * 100);
+      
+      // 生成技能列表
+      const skills = (hero.skillSlots || []).filter(s => s);
+      const skillsHtml = skills.length > 0 
+        ? skills.map(s => `<div style="color: #ccc; font-size: 10px; margin-top: 2px;">• ${s.name}: ${s.desc}</div>`).join('')
+        : '<div style="color: #666; font-size: 10px;">(无装备技能)</div>';
+
+      const box = document.createElement('div');
+      box.className = 'hero-status-box';
+      box.innerHTML = `
+        <div style="font-weight:bold; font-size:14px; text-shadow: 1px 1px 2px black;">${hero.name}</div>
+        <div class="hp-bar-bg">
+          <div class="hp-bar-fill" style="width: ${hpPct}%; background: ${hpPct < 30 ? 'linear-gradient(90deg, #e74c3c, #c0392b)' : ''}"></div>
+        </div>
+        <div class="hp-text">HP ${hero.hp} / ${hero.maxHp}</div>
+        
+        <div class="stat-detail">
+          <div style="margin-bottom: 6px; font-weight: bold; border-bottom: 1px solid rgba(255,165,0,0.3); padding-bottom: 2px;">属性数值</div>
+          <div style="margin-bottom: 8px;">STR: ${hero.strength} | TOU: ${hero.toughness} | AGI: ${hero.agility} | INT: ${hero.intellect}</div>
+          
+          <div style="margin-bottom: 4px; font-weight: bold; border-bottom: 1px solid rgba(255,165,0,0.3); padding-bottom: 2px;">当前技能</div>
+          ${skillsHtml}
+        </div>
+      `;
+
+      // 绑定点击事件：仅切换被点击英雄的详情
+      box.onclick = () => {
+        const detail = box.querySelector('.stat-detail');
+        const isShowing = detail.style.display === 'block';
+        detail.style.display = isShowing ? 'none' : 'block';
+      };
+
+      this.els.partyStatus.appendChild(box);
+    });
   }
 
   showCharacterSelect(onConfirm) {
@@ -62,12 +103,11 @@ export class UIManager {
 
   showMapUI() {
     this.els.hud.style.display = 'flex';
-    const top = document.getElementById('top-progress');
-    if (top) top.style.display = 'flex';
+    document.getElementById('top-progress').style.display = 'flex';
+    if(this.els.partyStatus) this.els.partyStatus.style.display = 'flex';
   }
 
   updateMovementUI(points) { this.els.movementEl.textContent = `行动力：${points}`; }
-  updateTurnCount(_turn) {}
 
   updateProgressBar(turn, maxTurns) {
     const bar = document.getElementById('turn-progress-bar');
@@ -81,103 +121,57 @@ export class UIManager {
 
   showCombatOverlay(combatManager) {
     if (this.els.combatUI) this.els.combatUI.style.display = 'block';
-    if (this.els.reactCombatRoot) this.els.reactCombatRoot.style.display = 'block';
-
     this.els.hud.style.display = 'none';
-    const top = document.getElementById('top-progress');
-    if (top) top.style.display = 'none';
-
+    document.getElementById('top-progress').style.display = 'none';
+    if(this.els.partyStatus) this.els.partyStatus.style.display = 'none';
     this.updateCombatUI(combatManager);
   }
 
   hideCombatOverlay() {
     if (this.els.combatUI) this.els.combatUI.style.display = 'none';
-    if (this.els.reactCombatRoot) this.els.reactCombatRoot.style.display = 'none';
-
     this.els.hud.style.display = 'flex';
-
-    const top = document.getElementById('top-progress');
-    if (top) top.style.display = 'flex';
-
-    if (window.unmountCombatUI) {
-      window.unmountCombatUI(this.els.reactCombatRoot);
-    }
+    document.getElementById('top-progress').style.display = 'flex';
+    if(this.els.partyStatus) this.els.partyStatus.style.display = 'flex';
+    if (window.unmountCombatUI) window.unmountCombatUI();
   }
 
   updateCombatUI(combatManager) {
     if (!combatManager || !window.renderCombatUI) return;
-
     const stateSnapshot = {
-      heroes: combatManager.heroes.map(h => ({
-          ...h,
-          skills: h.skillSlots ? h.skillSlots.filter(s => s) : h.skills
-      })),
+      heroes: combatManager.heroes.map(h => ({ ...h, skills: h.skillSlots ? h.skillSlots.filter(s => s) : h.skills })),
       enemies: [...combatManager.enemies],
       phase: combatManager.phase,
-      activeUnit: combatManager.activeUnit ? {
-          ...combatManager.activeUnit,
-          skills: combatManager.activeUnit.skillSlots ? combatManager.activeUnit.skillSlots.filter(s => s) : combatManager.activeUnit.skills
-      } : null,
+      activeUnit: combatManager.activeUnit ? { ...combatManager.activeUnit, skills: combatManager.activeUnit.skillSlots ? combatManager.activeUnit.skillSlots.filter(s => s) : combatManager.activeUnit.skills } : null,
       turnOrder: [combatManager.activeUnit, ...combatManager.turnOrder].filter(Boolean),
       logs: [...combatManager.logs],
       diceInfo: combatManager.diceInfo
     };
-
     const callbacks = {
-      onStartBattle: () => {
-        if(combatManager.startGame) combatManager.startGame();
-        else combatManager.phase = 'PLAYER_TURN';
-        this.updateCombatUI(combatManager);
-      },
+      onStartBattle: () => { if(combatManager.startGame) combatManager.startGame(); else combatManager.phase = 'PLAYER_TURN'; this.updateCombatUI(combatManager); },
       onSkillSelect: (skill) => combatManager.selectSkill(skill),
       onTargetSelect: (targetId) => combatManager.executePlayerAction(targetId),
       onRollComplete: () => combatManager.applyDamage(),
       onExecuteComplete: () => combatManager.evaluateTurn(),
       onFinishCombat: () => this.onCombatResult(combatManager.phase === 'WIN' ? 'win' : 'lose')
     };
-
-    // ⚠️ 关键修复：直接传递字符串 ID 给 React
     window.renderCombatUI('react-combat-root', stateSnapshot, callbacks);
   }
 
-  onCombatResult(result) {
-    this.onCombatEnd(result);
-  }
+  onCombatResult(result) { this.hideCombatOverlay(); this.onCombatEnd(result); }
 
   showEvent(title, desc, buttons = []) {
     const { eventUI, eventTitle, eventDesc, eventButtons } = this.els;
-
-    if (!eventUI) {
-      console.warn("未找到 eventUI DOM 节点，无法显示事件弹窗。");
-      return;
-    }
-
+    if (!eventUI) return;
     eventUI.style.display = 'flex';
     eventTitle.innerText = title;
     eventDesc.innerText = desc;
     eventButtons.innerHTML = '';
-
     buttons.forEach(btn => {
       const button = document.createElement('button');
       button.innerText = btn.text;
       button.style.cssText = "background: #e67e22; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;";
-
-      button.onclick = () => {
-        eventUI.style.display = 'none';
-        if (btn.onClick) btn.onClick();
-      };
+      button.onclick = () => { eventUI.style.display = 'none'; if (btn.onClick) btn.onClick(); };
       eventButtons.appendChild(button);
     });
   }
-
-  hideEvent() {
-    if(this.els.eventUI) this.els.eventUI.style.display = 'none';
-  }
-  onCombatResult(result) {
-      // 1. 关闭战斗画面，恢复地图 HUD
-      this.hideCombatOverlay();
-
-      // 2. 把结果（'win' 或 'lose'）告诉 main.js
-      this.onCombatEnd(result);
-    }
 }
