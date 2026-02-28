@@ -118,9 +118,15 @@ export class HexMap {
       else if (roll > 0.95) {
         tile.content = makeDungeon("地牢", 1);
       } 
+      else if (roll > 0.91) {
+        tile.content = makeTreasure(3); // 史诗（最稀有）
+      }
       else if (roll > 0.90) {
-        tile.content = makeTreasure(1);
-      }else if (roll > 0.89) {
+        tile.content = makeTreasure(2); // 稀有
+      }
+      else if (roll > 0.88) {
+        tile.content = makeTreasure(1); // 普通
+      }else if (roll > 0.85) {
         tile.content = makeLighthouse(1);
       }
     });

@@ -135,7 +135,11 @@ export class Tile {
 
       if (this.content.type === TileContentType.BOSS) ctx.fillText('B', x, y);
       else if (this.content.type === TileContentType.DUNGEON) ctx.fillText(`${this.content.level}`, x, y);
-      else if (this.content.type === TileContentType.TREASURE) ctx.fillText('$', x, y);
+      else if (this.content.type === TileContentType.TREASURE) {
+        if (this.content.lootTier === 3) ctx.fillText('💎', x, y);
+        else if (this.content.lootTier === 2) ctx.fillText('🔷', x, y);
+        else ctx.fillText('💰', x, y);
+      }
 
       ctx.textBaseline = 'alphabetic';
     }

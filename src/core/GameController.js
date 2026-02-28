@@ -154,24 +154,50 @@ export class GameController {
             { text: "⚔️ 开战", onClick: () => { tile.content = null; this.fsm.transition(GameState.COMBAT, content); } },
             { text: "🏃 撤退", onClick: () => { this.player.movementPoints = 0; this.ui.updateMovementUI(0); } }
         ]);
-    } else if (content.type === TileContentType.TREASURE) {
-      tile.content = null;
-      const loot = rollRandomItem();
-      this.ui.showChestReward(loot, () => {
-        // 道具放入第一个英雄背包（后续可做选择）
-        if (this.selectedHeroes.length > 0) {
-          this.selectedHeroes[0].inventory.push(loot);
-        }
-      });
-    } else if (content.type === TileContentType.ALTAR) {
-        this.ui.showEvent("🔮 祭坛", "祈祷？", [{ text: "🙏 祈祷", onClick: () => { tile.content = null; this._handleAltarPray(); } }, { text: "🚶 离开", onClick: () => {} }]);
-    } else if (content.type === TileContentType.LIGHTHOUSE) {
-        this.ui.showEvent("🗼 灯塔", "远眺方向", [
-            { text: "右上", onClick: () => { tile.content = null; this._revealDirection(1, -1); } },
-            { text: "右下", onClick: () => { tile.content = null; this._revealDirection(1, 1); } },
-            { text: "左下", onClick: () => { tile.content = null; this._revealDirection(-1, 1); } },
-            { text: "左上", onClick: () => { tile.content = null; this._revealDirection(-1, -1); } }
-        ]);
+    }else if (content.type === TileContentType.TREASURE) {
+      this.ui.showEvent(
+        "🎁 宝箱",
+        `发现 ${content.name}，要打开吗？`,
+        [
+          {
+            text: "🎁 打开",
+            onClick: () => {
+              tile.content = null;
+              let loot;
+              if (content.lootTier === 3) {
+                  // 史诗必出史诗
+                  loot = rollRandomItem();
+                  while (loot.rarity !== 'epic') {
+                      loot = rollRandomItem();
+                  }
+              } else if (content.lootTier === 2) {
+                  // 稀有：不出普通
+                  loot = rollRandomItem();
+                  while (loot.rarity === 'common') {
+                      loot = rollRandomItem();
+                  }
+              } else {
+                  // 普通宝箱：正常随机
+                  loot = rollRandomItem();
+              }
+              this.ui.showChestReward(loot, () => {
+                  if (this.selectedHeroes.length > 0) {
+                      this.selectedHeroes[0].inventory.push(loot);
+                  }
+              });
+            }
+          }
+        ]
+      );
+    }else if (content.type === TileContentType.ALTAR) {
+      this.ui.showEvent("🔮 祭坛", "祈祷？", [{ text: "🙏 祈祷", onClick: () => { tile.content = null; this._handleAltarPray(); } }, { text: "🚶 离开", onClick: () => {} }]);
+    }else if (content.type === TileContentType.LIGHTHOUSE) {
+      this.ui.showEvent("🗼 灯塔", "远眺方向", [
+          { text: "右上", onClick: () => { tile.content = null; this._revealDirection(1, -1); } },
+          { text: "右下", onClick: () => { tile.content = null; this._revealDirection(1, 1); } },
+          { text: "左下", onClick: () => { tile.content = null; this._revealDirection(-1, 1); } },
+          { text: "左上", onClick: () => { tile.content = null; this._revealDirection(-1, -1); } }
+      ]);
     }
   }
 
