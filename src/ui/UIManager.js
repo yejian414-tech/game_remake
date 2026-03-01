@@ -1,6 +1,7 @@
 // src/ui/UIManager.js
 import { DataLoader } from '../data/DataLoader.js';
 import { ChestAnimation } from './ChestAnimation.js';
+import { InventoryUI } from './InventoryUI.js';/////////////////////////////////////
 
 export class UIManager {
   constructor(elements, callbacks = {}) {
@@ -20,11 +21,14 @@ export class UIManager {
       eventDesc: document.getElementById('event-desc'),
       eventButtons: document.getElementById('event-buttons'),
     };
+
     this.onCombatEnd = callbacks.onCombatEnd ?? (() => { });
+    this.inventoryUI = new InventoryUI();///////////////////////////////////////////////////////////
   }
 
   // ── 修改：更新状态栏并绑定点击事件 ──
   updatePartyStatus(heroes) {
+    this.inventoryUI?.update(heroes);////////////////////////////////////////////////////////////////
     if (!this.els.partyStatus) return;
     this.els.partyStatus.style.display = 'flex';
     this.els.partyStatus.innerHTML = '';
@@ -138,6 +142,7 @@ export class UIManager {
 
   updateCombatUI(combatManager) {
     if (!combatManager || !window.renderCombatUI) return;
+    this.inventoryUI?.update(combatManager.heroes);///////////////////////////////////////////////////////////
     const stateSnapshot = {
       heroes: combatManager.heroes.map(h => ({ ...h, skills: h.skillSlots ? h.skillSlots.filter(s => s) : h.skills })),
       enemies: [...combatManager.enemies],
@@ -180,6 +185,98 @@ export class UIManager {
    * @param {object} item  道具对象
    * @param {function} [onClose] 关闭回调
    */
+
+  // UIManager.js 里新增：宝箱掉落分配给哪个角色（并可直接装备）
+  showLootAssign(item, heroes, onPick) {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = [
+      "position:fixed",
+      "inset:0",
+      "background:rgba(0,0,0,0.55)",
+      "z-index:220",
+      "display:flex",
+      "align-items:center",
+      "justify-content:center",
+      "font-family:sans-serif",
+    ].join(";");
+
+    const card = document.createElement("div");
+    card.style.cssText = [
+      "width:460px",
+      "max-width:92vw",
+      "background:rgba(10,10,25,0.95)",
+      "border:1px solid rgba(255,255,255,0.18)",
+      "border-radius:14px",
+      "padding:14px",
+      "color:white",
+    ].join(";");
+
+    const heroBtns = (heroes ?? []).map((h, i) => {
+      const name = h.name ?? `Hero${i + 1}`;
+      return `
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
+        <div style="flex:1;opacity:.9;">${name}</div>
+        <button class="loot-put" data-i="${i}"
+          style="padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);
+                 background:rgba(255,255,255,0.06);color:white;cursor:pointer;">
+          放入背包
+        </button>
+        <button class="loot-equip" data-i="${i}"
+          style="padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);
+                 background:rgba(46,204,113,0.18);color:white;cursor:pointer;">
+          直接装备
+        </button>
+      </div>
+    `;
+    }).join("");
+
+    card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-weight:700;">选择给哪个角色</div>
+      <button id="loot-close" style="background:transparent;border:none;color:#aaa;cursor:pointer;">✕</button>
+    </div>
+
+    <div style="padding:10px;border:1px solid rgba(255,255,255,0.10);border-radius:12px;">
+      <div style="font-weight:700;">${item?.name ?? "Item"}</div>
+      <div style="opacity:.75;font-size:12px;margin-top:4px;">${item?.desc ?? ""}</div>
+      <div style="opacity:.7;font-size:12px;margin-top:6px;">
+        稀有度：${item?.rarity ?? "common"} | 槽位：${item?.slot ?? 0}
+      </div>
+      <div style="opacity:.65;font-size:12px;margin-top:6px;">
+        “直接装备”会装备到该物品的 slot（0/1），并刷新属性。
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      ${heroBtns || `<div style="opacity:.75;">没有角色可选</div>`}
+    </div>
+  `;
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    card.querySelector("#loot-close")?.addEventListener("click", close);
+
+    // 放入背包
+    card.querySelectorAll(".loot-put").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const i = Number(btn.getAttribute("data-i") ?? 0);
+        onPick?.({ heroIndex: i, action: "put" });
+        close();
+      });
+    });
+
+    // 直接装备
+    card.querySelectorAll(".loot-equip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const i = Number(btn.getAttribute("data-i") ?? 0);
+        onPick?.({ heroIndex: i, action: "equip" });
+        close();
+      });
+    });
+  }
+
   showChestReward(item, onClose) {
     ChestAnimation.play(item, onClose ?? (() => {}));
   }

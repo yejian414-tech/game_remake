@@ -60,9 +60,20 @@ export class GameController {
           // 延迟一帧确保战斗 UI 已关闭
           setTimeout(() => {
             this.ui.showChestReward(loot, () => {
-              if (this.selectedHeroes.length > 0) {
-                this.selectedHeroes[0].inventory.push(loot);
-              }
+              this.ui.showLootAssign(loot, this.selectedHeroes, ({ heroIndex, action }) => {
+                const hero = this.selectedHeroes?.[heroIndex];
+                if (!hero) return;
+
+                if (action === "put") {
+                  hero.inventory.push(loot);
+                } else if (action === "equip") {
+                  const slot = Math.max(0, Math.min(1, loot.slot ?? 0));
+                  hero.equip?.(loot, slot);
+                  hero.refreshDerivedStats?.();
+                }
+
+                this.ui.updatePartyStatus(this.selectedHeroes);
+              });
             });
           }, 300);
         }
@@ -176,9 +187,27 @@ export class GameController {
                   loot = rollRandomItem();
               }
               this.ui.showChestReward(loot, () => {
-                  if (this.selectedHeroes.length > 0) {
-                      this.selectedHeroes[0].inventory.push(loot);
+                // ✅ 让玩家选择给哪个角色 + 放入背包/直接装备
+                this.ui.showLootAssign(loot, this.selectedHeroes, ({ heroIndex, action }) => {
+                  const hero = this.selectedHeroes?.[heroIndex];
+                  if (!hero) return;
+
+                  if (action === "put") {
+                    hero.inventory.push(loot);
+                  } else if (action === "equip") {
+                    const slot = Math.max(0, Math.min(1, loot.slot ?? 0));
+                    if (typeof hero.equip === "function") {
+                      hero.equip(loot, slot);
+                    } else {
+                      hero.equipSlots = hero.equipSlots ?? [null, null];
+                      hero.equipSlots[slot] = loot;
+                      hero.refreshDerivedStats?.();
+                    }
                   }
+
+                  // 刷新队伍状态UI（血量/属性等）
+                  this.ui.updatePartyStatus(this.selectedHeroes);
+                });
               });
             }
           }
