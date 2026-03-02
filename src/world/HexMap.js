@@ -116,7 +116,7 @@ export class HexMap {
         tile.content = makeAltar(1);
       }
       else if (roll > 0.95) {
-        tile.content = makeDungeon("地牢", 1);
+        tile.content = makeDungeon("Dungeon", 1);
       } 
       else if (roll > 0.91) {
         tile.content = makeTreasure(3); // 史诗（最稀有）

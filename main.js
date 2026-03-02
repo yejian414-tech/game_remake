@@ -35,7 +35,7 @@ async function init() {
   try {
     await DataLoader.loadAll();
   } catch (error) {
-    alert("数据加载失败！请检查 src/data/ 目录下是否有 DataLoader.js, heroes.json 和 skills.json！");
+    alert("Data loading failed! Please check if DataLoader.js, heroes.json and skills.json are in the src/data/ directory!");
     console.error(error);
     return;
   }

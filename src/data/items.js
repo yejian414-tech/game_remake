@@ -1,15 +1,10 @@
 // src/data/items.js
 
-/**
- * 游戏道具定义
- * 每个道具包含：id, name, desc, rarity, icon（p5绘制指令标识）
- * rarity: 'common' | 'rare' | 'epic'
- */
 export const ItemDB = [
   {
     id: 'shield_guardian',
-    name: '守护者之盾',
-    desc: '传说中骑士团长的护盾，散发着神圣的光芒',
+    name: 'Guardian Shield',
+    desc: 'Legendary shield of the Knight Captain, glowing with divine light',
     rarity: 'rare',
     icon: 'shield',
     statBonus: { toughness: 8, strength: 2 },
@@ -17,8 +12,8 @@ export const ItemDB = [
   },
   {
     id: 'giant_sword',
-    name: '巨剑',
-    desc: '沉重而锋利的双手巨剑，挥舞时带有呼啸风声',
+    name: 'Greatsword',
+    desc: 'Heavy and sharp two-handed sword, whistling through the air',
     rarity: 'epic',
     icon: 'sword',
     statBonus: { strength: 12 },
@@ -26,8 +21,8 @@ export const ItemDB = [
   },
   {
     id: 'holy_water',
-    name: '圣水瓶',
-    desc: '蕴含治愈之力的圣水，饮用后恢复生命',
+    name: 'Holy Water',
+    desc: 'Holy water with healing power, restores HP on use',
     rarity: 'common',
     icon: 'potion',
     statBonus: {},
@@ -35,8 +30,8 @@ export const ItemDB = [
   },
   {
     id: 'lightning_boots',
-    name: '闪电靴子',
-    desc: '镌刻着雷电纹路的轻靴，穿上后脚步如风',
+    name: 'Lightning Boots',
+    desc: 'Light boots engraved with lightning patterns, move like the wind',
     rarity: 'rare',
     icon: 'boots',
     statBonus: { agility: 10 },
@@ -44,8 +39,8 @@ export const ItemDB = [
   },
   {
     id: 'lucky_clover',
-    name: '幸运草徽章',
-    desc: '四叶草形状的古老徽章，佩戴者总能逢凶化吉',
+    name: 'Lucky Clover Badge',
+    desc: 'Ancient clover-shaped badge, brings luck to the wearer',
     rarity: 'common',
     icon: 'clover',
     statBonus: { talent: 6, awareness: 4 },
@@ -53,10 +48,6 @@ export const ItemDB = [
   },
 ];
 
-/**
- * 根据权重随机获取一个道具
- * @returns {object} 道具副本
- */
 export function rollRandomItem() {
   const weights = ItemDB.map(item => {
     if (item.rarity === 'epic') return 1;
@@ -72,9 +63,8 @@ export function rollRandomItem() {
   return { ...ItemDB[0] };
 }
 
-/** 稀有度颜色映射 */
 export const RARITY_COLORS = {
-  common: { main: '#a0a0a0', glow: '#cccccc', label: '普通' },
-  rare:   { main: '#3b82f6', glow: '#60a5fa', label: '稀有' },
-  epic:   { main: '#a855f7', glow: '#c084fc', label: '史诗' },
+  common: { main: '#a0a0a0', glow: '#cccccc', label: 'Common' },
+  rare:   { main: '#3b82f6', glow: '#60a5fa', label: 'Rare' },
+  epic:   { main: '#a855f7', glow: '#c084fc', label: 'Epic' },
 };

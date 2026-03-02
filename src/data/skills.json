@@ -2,66 +2,66 @@
   "skills": [
     {
       "id": "slash",
-      "name": "斩击",
+      "name": "Slash",
       "type": "attack",
       "target": "single",
       "power": 120,
       "cooldown": 0,
-      "desc": "对单个敌人造成 120% 攻击力的物理伤害"
+      "desc": "Deals 120% ATK physical damage to a single enemy"
     },
     {
       "id": "shield_bash",
-      "name": "盾击",
+      "name": "Shield Bash",
       "type": "attack",
       "target": "single",
       "power": 80,
       "cooldown": 2,
-      "desc": "攻击并使目标眩晕 1 回合"
+      "desc": "Attacks and stuns target for 1 turn"
     },
     {
       "id": "fireball",
-      "name": "火球术",
+      "name": "Fireball",
       "type": "magic",
       "target": "aoe",
       "power": 150,
       "cooldown": 1,
-      "desc": "对所有敌人造成 150% 魔法攻击的火焰伤害"
+      "desc": "Deals 150% MAG damage to all enemies"
     },
     {
       "id": "frost_nova",
-      "name": "冰冻新星",
+      "name": "Frost Nova",
       "type": "magic",
       "target": "aoe",
       "power": 100,
       "cooldown": 3,
-      "desc": "冻结所有敌人 2 回合"
+      "desc": "Freezes all enemies for 2 turns"
     },
     {
       "id": "arrow_shot",
-      "name": "箭矢",
+      "name": "Arrow Shot",
       "type": "attack",
       "target": "single",
       "power": 110,
       "cooldown": 0,
-      "desc": "远程攻击单个敌人"
+      "desc": "Ranged attack on a single enemy"
     },
     {
       "id": "backstab",
-      "name": "背刺",
+      "name": "Backstab",
       "type": "attack",
       "target": "single",
       "power": 200,
       "cooldown": 3,
-      "desc": "暴击率 +50%，造成 200% 攻击力伤害"
+      "desc": "Crit rate +50%, deals 200% ATK damage"
     },
     {
       "id": "evasion",
-      "name": "闪避",
+      "name": "Evasion",
       "type": "buff",
       "target": "self",
       "power": 0,
       "cooldown": 2,
-      "desc": "本回合闪避率 +60%"
+      "desc": "Evasion rate +60% this turn"
     }
   ]
 }

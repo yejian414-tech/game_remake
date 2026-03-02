@@ -1,9 +1,9 @@
 // src/world/Tile.js
 
 export const TileType = {
-  GRASS: { id: 0, color: '#7cfc00', name: '平原', moveCost: 1 },
-  FOREST: { id: 1, color: '#228b22', name: '森林', moveCost: 1 },
-  MOUNTAIN: { id: 2, color: '#8b4513', name: '山脉', moveCost: 2 },
+  GRASS: { id: 0, color: '#7cfc00', name: 'Plains', moveCost: 1 },
+  FOREST: { id: 1, color: '#228b22', name: 'Forest', moveCost: 1 },
+  MOUNTAIN: { id: 2, color: '#8b4513', name: 'Mountains', moveCost: 2 },
 };
 
 export const TileContentType = {
@@ -23,13 +23,13 @@ export function makeBoss(name, level = 5) {
 }
 
 export function makeTreasure(lootTier = 1) {
-  const tierName = ['', '普通宝箱', '稀有宝箱', '史诗宝箱'][lootTier] ?? '普通宝箱';
+  const tierName = ['', 'Common Chest', 'Rare Chest', 'Epic Chest'][lootTier] ?? 'Common Chest';
   return { type: TileContentType.TREASURE, name: tierName, lootTier };
 }
 export function makeAltar(level = 1) {
   return {
     type: TileContentType.ALTAR,
-    name: "神秘祭坛",
+    name: "Mysterious Altar",
     level
   };
 }

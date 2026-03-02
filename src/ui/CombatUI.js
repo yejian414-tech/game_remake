@@ -71,12 +71,11 @@ const GoblinFigure = () => (
     </svg>
 );
 
-// 动态匹配 JSON 里的职业
 const getFigure = (unit) => {
     if (unit.type === 'enemy') return <GoblinFigure />;
     if (unit.id === 'mage') return <MageFigure />;
-    if (unit.id === 'ranger') return <MageFigure />; // 占位
-    return <KnightFigure />; // 默认战士外观
+    if (unit.id === 'ranger') return <MageFigure />; 
+    return <KnightFigure />; 
 };
 
 const CombatApp = ({ state, callbacks }) => {
@@ -205,7 +204,7 @@ const CombatApp = ({ state, callbacks }) => {
                     {getFigure(unit)}
                 </div>
                 <div className="space-y-1">
-                    <div className="flex justify-between text-[9px] text-stone-400"><span>HP</span><span>{isEnemy ? '力量:'+unit.strength : '护甲:'+unit.defense}</span></div>
+                    <div className="flex justify-between text-[9px] text-stone-400"><span>HP</span><span>{isEnemy ? 'STR:'+unit.strength : 'Armor:'+unit.defense}</span></div>
                     <HealthBar current={unit.hp} max={unit.maxHp} isEnemy={isEnemy} />
                 </div>
             </div>
@@ -216,11 +215,10 @@ const CombatApp = ({ state, callbacks }) => {
         <div className="w-full min-h-screen bg-slate-950 text-stone-200 font-sans selection:bg-amber-500/30 flex items-center justify-center p-4">
             <div className="w-full max-w-5xl bg-stone-800 rounded-xl shadow-2xl border-4 border-stone-700 overflow-hidden relative flex flex-col min-h-[650px]">
                 
-                {/* 顶部状态栏，复刻原来的小圆点逻辑 */}
                 <div className="bg-stone-900 z-20 p-3 flex justify-between items-center border-b border-stone-700 shadow-md">
                     <div className="flex items-center gap-3">
                         <div className={`px-3 py-1 rounded text-xs font-bold tracking-widest ${activeUnit?.type === 'player' && phase !== 'START' ? 'bg-amber-600 text-white animate-pulse' : 'bg-stone-800 text-stone-400'}`}>
-                            玩家阶段
+                            PLAYER PHASE
                         </div>
                         
                         <div className="flex gap-1 items-center px-4">
@@ -230,7 +228,7 @@ const CombatApp = ({ state, callbacks }) => {
                         </div>
 
                         <div className={`px-3 py-1 rounded text-xs font-bold tracking-widest ${activeUnit?.type === 'enemy' && phase !== 'START' ? 'bg-rose-800 text-white animate-pulse' : 'bg-stone-800 text-stone-400'}`}>
-                            敌方阶段
+                            ENEMY PHASE
                         </div>
                     </div>
                     <div className="text-stone-400 text-xs font-mono">FTK COMBAT V2 // ENHANCED FX</div>
@@ -262,7 +260,7 @@ const CombatApp = ({ state, callbacks }) => {
                                     <div className="mt-4 text-center bg-black/40 p-2 rounded backdrop-blur-sm">
                                         <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Roll Result</p>
                                         <p className="text-xs text-stone-300 mt-1">
-                                            {diceInfo?.desc || (diceValue <= 2 ? '0.5x (偏斜)' : diceValue === 6 ? '1.5x (暴击!)' : diceValue === 5 ? '1.2x (重击)' : '1.0x (命中)')}
+                                            {diceInfo?.desc || (diceValue <= 2 ? '0.5x (Deflected)' : diceValue === 6 ? '1.5x (Crit!)' : diceValue === 5 ? '1.2x (Heavy)' : '1.0x (Hit)')}
                                         </p>
                                     </div>
                                 </div>
@@ -273,7 +271,7 @@ const CombatApp = ({ state, callbacks }) => {
                                             {phase === 'WIN' ? 'VICTORY' : 'DEFEAT'}
                                         </h2>
                                         <button onClick={onFinishCombat} className="flex items-center gap-2 bg-stone-200 text-stone-900 px-6 py-2 rounded-full font-bold hover:bg-white hover:scale-105 transition-all shadow-lg mx-auto mt-4 text-sm">
-                                            <Icons.RotateCcw /> 返回地图
+                                            <Icons.RotateCcw /> Back to Map
                                         </button>
                                     </div>
                                 ) : (
@@ -291,28 +289,27 @@ const CombatApp = ({ state, callbacks }) => {
                 <div className="h-44 bg-stone-900 border-t-4 border-stone-800 flex z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
                     <div className="w-1/2 p-4 border-r border-stone-800 flex flex-col justify-center">
                         <div className="text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider flex items-center justify-between">
-                            <span className="flex items-center gap-2"><Icons.Sword /> 战斗技能指挥</span>
-                            {activeUnit?.type === 'player' && phase === 'PLAYER_TURN' && <span className="text-amber-500 animate-pulse text-[10px]">等待 {activeUnit.name} 指示</span>}
+                            <span className="flex items-center gap-2"><Icons.Sword /> Combat Command</span>
+                            {activeUnit?.type === 'player' && phase === 'PLAYER_TURN' && <span className="text-amber-500 animate-pulse text-[10px]">Waiting for {activeUnit.name}</span>}
                         </div>
                         
                         {phase === 'START' ? (
                             <div className="flex justify-center h-full items-center pb-4">
                                 <button onClick={onStartBattle} className="bg-amber-600 hover:bg-amber-500 text-white px-8 py-3 rounded font-bold flex items-center gap-2 animate-pulse shadow-lg text-sm">
-                                    <Icons.Play /> 开始战斗
+                                    <Icons.Play /> Start Battle
                                 </button>
                             </div>
                         ) : phase === 'AWAIT_TARGET' ? (
                              <div className="flex-1 flex flex-col justify-center items-center bg-rose-500/10 border border-dashed border-rose-500/30 rounded-lg pb-2">
                                 <p className="text-rose-400 font-bold text-xs flex items-center gap-2 mb-2">
-                                    <Icons.Target /> 请点击右上方的敌人作为目标
+                                    <Icons.Target /> Click an enemy to target
                                 </p>
                                 <button onClick={() => onSkillSelect(null)} className="text-[10px] bg-stone-800 px-3 py-1 rounded hover:bg-stone-700 text-stone-300">
-                                    取消施法
+                                    Cancel
                                 </button>
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-2 h-full pb-2">
-                                {/* 修复：这里改成遍历 skills 而不是 attacks */}
                                 {activeUnit?.type === 'player' ? activeUnit.skills.map((attack, idx) => (
                                     <button
                                         key={attack.id || idx}
@@ -345,7 +342,7 @@ const CombatApp = ({ state, callbacks }) => {
                         )}
                     </div>
                     <div className="w-1/2 p-4 bg-black/20 overflow-hidden flex flex-col">
-                        <div className="text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">战斗记录</div>
+                        <div className="text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Combat Log</div>
                         <div className="flex-1 overflow-y-auto space-y-1.5 custom-scrollbar pr-2">
                             {logs.map((log, i) => (
                                 <div key={i} className={`text-xs py-1 border-b border-white/5 ${i === 0 ? 'text-amber-100 font-medium' : 'text-stone-500'}`}>
@@ -361,7 +358,6 @@ const CombatApp = ({ state, callbacks }) => {
     );
 }
 
-// 暴露全局方法供原生 JS (UIManager.js) 挂载使用
 window.renderCombatUI = function(containerId, combatState, callbacks) {
     const container = document.getElementById(containerId);
     if (!window.combatRoot) window.combatRoot = ReactDOM.createRoot(container);
