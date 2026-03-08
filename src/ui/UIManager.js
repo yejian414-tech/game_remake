@@ -20,6 +20,10 @@ export class UIManager {
       eventTitle: document.getElementById('event-title'),
       eventDesc: document.getElementById('event-desc'),
       eventButtons: document.getElementById('event-buttons'),
+      storyScreen: document.getElementById('story-screen'),
+      storyTitle: document.getElementById('story-title'),
+      storyText: document.getElementById('story-text'),
+      storyNextBtn: document.getElementById('story-next-btn'),
     };
     this.onCombatEnd = callbacks.onCombatEnd ?? (() => { });
     this.inventoryUI = new InventoryUI();
@@ -98,6 +102,17 @@ export class UIManager {
     if (text) text.textContent = `${turn}/${maxTurns}`;
     bar.classList.toggle('danger', turn >= maxTurns - 3);
   }
+
+  updateBossMode() {
+    const title = document.querySelector('#top-progress-header span:first-child');
+    const desc = document.querySelector('#top-progress-header span:last-child');
+    if (title) title.textContent = '⚔️ Boss Battle';
+    if (desc) desc.textContent = '在十回合内击败boss否则结束游戏';
+  }
+
+  showGameOver() {
+    this.showEvent("💀 Game Over", "You failed to defeat the boss in time!", [{ text: "Restart", onClick: () => location.reload() }]);
+  }
   showCombatOverlay(combatManager) {
     if (this.els.combatUI) this.els.combatUI.style.display = 'block';
     this.els.hud.style.display = 'none';
@@ -171,6 +186,19 @@ export class UIManager {
     card.querySelector("#loot-close")?.addEventListener("click", () => overlay.remove());
     card.querySelectorAll(".loot-put").forEach(btn => btn.addEventListener("click", () => { onPick?.({ heroIndex: Number(btn.dataset.i), action: "put" }); overlay.remove(); }));
     card.querySelectorAll(".loot-equip").forEach(btn => btn.addEventListener("click", () => { onPick?.({ heroIndex: Number(btn.dataset.i), action: "equip" }); overlay.remove(); }));
+  }
+
+  showStory(onNext) {
+    this.els.storyText.textContent = "在遥远的森林中，一棵古老的黑暗古树正在侵蚀这片土地。勇士们，你们需要在20回合内探索这片大地，然后前往地图右下角的黑暗古树，击败它以获得翡翠钥匙，拯救这片土地。";
+    this.els.storyScreen.style.display = 'flex';
+    this.els.storyNextBtn.onclick = () => {
+      this.hideStory();
+      onNext?.();
+    };
+  }
+
+  hideStory() {
+    this.els.storyScreen.style.display = 'none';
   }
   showChestReward(item, onClose) { ChestAnimation.play(item, onClose ?? (() => {})); }
 }

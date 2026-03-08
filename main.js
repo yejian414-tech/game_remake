@@ -85,7 +85,7 @@ async function init() {
   );
 
   // 5. 初始化控制器
-  const gameController = new GameController(map, player, ui);
+  const gameController = new GameController(map, player, ui, camera);
 
   // 6. 输入处理
   const inputHandler = new InputHandler(

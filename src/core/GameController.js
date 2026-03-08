@@ -12,15 +12,26 @@ import { Renderer } from '../rendering/Renderer.js';
 import { rollRandomItem } from '../data/items.js';
 
 export class GameController {
-  constructor(map, player, ui) {
-    this.map = map; this.player = player; this.ui = ui; this.selectedHeroes = []; this.combatManager = null; this.turnCount = 0; this.trapCooldown = 0;
+  constructor(map, player, ui, camera) {
+    this.map = map; this.player = player; this.ui = ui; this.camera = camera; this.selectedHeroes = []; this.combatManager = null; this.turnCount = 0; this.trapCooldown = 0; this.bossMode = false; this.currentMaxTurns = TurnConfig.MAX_TURNS;
     this.fsm = new StateMachine(GameState.INITIALIZING); this._setupStates();
+  }
+
+  hexToPixel(q, r, size) {
+    return {
+      x: size * (3 / 2 * q),
+      y: size * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
+    };
   }
 
   _setupStates() {
     this.fsm.addState(GameState.CHARACTER_SELECT, {
-      enter: () => this.ui.showCharacterSelect(heroes => { this.selectedHeroes = heroes.map(d => this._createHeroFromData(d)); this.fsm.transition(GameState.MAP_GENERATION); }),
+      enter: () => this.ui.showCharacterSelect(heroes => { this.selectedHeroes = heroes.map(d => this._createHeroFromData(d)); this.fsm.transition(GameState.STORY); }),
       exit: () => this.ui.hideCharacterSelect(),
+    });
+    this.fsm.addState(GameState.STORY, {
+      enter: () => this.ui.showStory(() => this.fsm.transition(GameState.MAP_GENERATION)),
+      exit: () => this.ui.hideStory(),
     });
     this.fsm.addState(GameState.MAP_GENERATION, {
       enter: () => this.ui.showMapGeneration(this.selectedHeroes, () => {
@@ -50,6 +61,10 @@ export class GameController {
         }
       },
     });
+    this.fsm.addState(GameState.GAME_OVER, {
+      enter: () => this.ui.showGameOver(),
+      exit: () => {},
+    });
   }
 
   _enterCombat(contentData) {
@@ -71,11 +86,42 @@ export class GameController {
   }
 
   _startTurn() {
-    this.turnCount += 1; this.ui.updateProgressBar(this.turnCount, TurnConfig.MAX_TURNS);
+    this.turnCount += 1; this.ui.updateProgressBar(this.turnCount, this.currentMaxTurns);
     const roller = this.selectedHeroes.length > 0 ? this.selectedHeroes.reduce((a, b) => ((a.speed ?? 0) >= (b.speed ?? 0) ? a : b)) : this.player;
     const total = rollSpeed(roller, 0.5, 20).gradeIndex + 1;
     this.player.movementPoints = total; this.ui.updateMovementUI(total); this.ui.updatePartyStatus(this.selectedHeroes);
     if (this.trapCooldown > 0) this.trapCooldown--;
+    if (!this.bossMode && this.turnCount === TurnConfig.MAX_TURNS) {
+      // 进入boss模式
+      this.bossMode = true;
+      this.turnCount = 0;
+      this.currentMaxTurns = 10;
+      this.ui.updateBossMode();
+      // 震动屏幕
+      document.body.classList.add('shake');
+      setTimeout(() => document.body.classList.remove('shake'), 500);
+
+      // 点亮boss区域视野
+      this.map.revealAround(20, 0, 10);
+
+      // 生成树林和boss
+      for (const tile of this.map.tiles.values()) {
+        const dq = tile.q - 20;
+        const dr = tile.r - 0;
+        const ds = -dq - dr;
+        const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
+        if (dist <= 4) {
+          tile.type = TileType.FOREST;
+        }
+      }
+      const bossTile = this.map.getTile(20, 0);
+      if (bossTile) {
+        this.map.placeContent(20, 0, makeBoss("Final Boss", 10));
+      }
+    } else if (this.bossMode && this.turnCount === this.currentMaxTurns) {
+      // boss模式超时，游戏结束
+      this.fsm.transition(GameState.GAME_OVER);
+    }
   }
 
   onEndTurnBtnClick() { this._startTurn(); }

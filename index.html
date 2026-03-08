@@ -67,6 +67,8 @@
 
     .animate-spin-slow { animation: spin 0.5s linear infinite; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .shake { animation: shake 0.5s ease-in-out; }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #292524; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #57534e; border-radius: 4px; }
@@ -102,6 +104,14 @@
 </div>
 
 <div id="map-gen-screen" class="fullscreen"><h2>Building World...</h2></div>
+
+<div id="story-screen" class="fullscreen" style="background: rgba(0,0,0,0.9); justify-content: center; align-items: center; text-align: center;">
+  <div style="max-width: 600px; color: white;">
+    <h2 id="story-title" style="color: #f39c12; margin-bottom: 20px;">第一章节：黑暗古树</h2>
+    <p id="story-text" style="font-size: 18px; line-height: 1.6; margin-bottom: 30px;"></p>
+    <button id="story-next-btn" style="background: #e67e22; border: none; color: white; padding: 10px 30px; border-radius: 5px; cursor: pointer;">继续</button>
+  </div>
+</div>
 
 <div id="hud">
   <span id="movement-points">Action Points: -</span>
