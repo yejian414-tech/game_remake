@@ -4,6 +4,7 @@ export const TileType = {
   GRASS: { id: 0, color: '#7cfc00', name: 'Plains', moveCost: 1 },
   FOREST: { id: 1, color: '#228b22', name: 'Forest', moveCost: 1 },
   MOUNTAIN: { id: 2, color: '#8b4513', name: 'Mountains', moveCost: 2 },
+  BARRIER: { id: 3, color: '#808080', name: 'Barrier', moveCost: Infinity },
 };
 
 export const TileContentType = {

@@ -24,10 +24,35 @@ export class HexMap {
         this.tiles.set(`${q},${r}`, new Tile(q, r, type));
       }
     }
+    this.generateBarrier();
   }
 
 
   getTile(q, r) { return this.tiles.get(`${q},${r}`); }
+
+  generateBarrier() {
+    const q0 = -this.radius;
+    const r0 = this.radius;
+    const barrierTiles = [];
+    for (const tile of this.tiles.values()) {
+      const dq = tile.q - q0;
+      const dr = tile.r - r0;
+      const ds = -dq - dr;
+      const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
+      if (dist === 4) {
+        barrierTiles.push(tile);
+      }
+    }
+    // 随机选择一个作为出口
+    if (barrierTiles.length > 0) {
+      const exitIndex = Math.floor(this.rng.next() * barrierTiles.length);
+      barrierTiles.forEach((tile, index) => {
+        if (index !== exitIndex) {
+          tile.type = TileType.BARRIER;
+        }
+      });
+    }
+  }
 
   // ── 揭示周围一圈 ─────────────────────────────────────────
   revealAround(q, r, revealRadius = 1) {
@@ -108,26 +133,94 @@ export class HexMap {
   }
 
   generateEvents() {
+    const q0 = -this.radius;
+    const r0 = this.radius;
+    const internalTiles = [];
     this.tiles.forEach(tile => {
-      if (tile.type.id === 2) return; // 山脉不生成事件
-  
+      const dq = tile.q - q0;
+      const dr = tile.r - r0;
+      const ds = -dq - dr;
+      const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
+      if (dist <= 4 && tile.type.id !== 3) {
+        internalTiles.push(tile);
+      }
+    });
+
+    // 保证每种事件生成一次
+    const eventTypes = [
+      () => makeAltar(1),
+      () => makeDungeon("Dungeon", 1),
+      () => makeTreasure(1), // 普通宝藏作为代表
+      () => makeLighthouse(1)
+    ];
+
+    const generatedTypes = new Set();
+
+    // 随机选择4个不同的内部瓦片
+    const shuffled = internalTiles.slice().sort(() => this.rng.next() - 0.5);
+    for (let i = 0; i < Math.min(4, shuffled.length); i++) {
+      if (!shuffled[i].content) {
+        shuffled[i].content = eventTypes[i]();
+        generatedTypes.add(eventTypes[i]().type);
+      }
+    }
+
+    // 然后随机生成其他事件
+    this.tiles.forEach(tile => {
+      if (tile.type.id === 2 || tile.type.id === 3) return; // 山脉和屏障不生成事件
+      if (tile.content) return; // 已有事件
+
+      const dq = tile.q - q0;
+      const dr = tile.r - r0;
+      const ds = -dq - dr;
+      const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
       const roll = this.rng.next();
-      if (roll > 0.975) {
-        tile.content = makeAltar(1);
-      }
-      else if (roll > 0.95) {
-        tile.content = makeDungeon("Dungeon", 1);
-      } 
-      else if (roll > 0.91) {
-        tile.content = makeTreasure(3); // 史诗（最稀有）
-      }
-      else if (roll > 0.90) {
-        tile.content = makeTreasure(2); // 稀有
-      }
-      else if (roll > 0.88) {
-        tile.content = makeTreasure(1); // 普通
-      }else if (roll > 0.85) {
-        tile.content = makeLighthouse(1);
+
+      if (dist > 4) {
+        // 屏障外部，使用原来概率，无 has 检查
+        if (roll > 0.975) {
+          tile.content = makeAltar(1);
+        }
+        else if (roll > 0.95) {
+          tile.content = makeDungeon("Dungeon", 1);
+        } 
+        else if (roll > 0.91) {
+          tile.content = makeTreasure(3); // 史诗（最稀有）
+        }
+        else if (roll > 0.90) {
+          tile.content = makeTreasure(2); // 稀有
+        }
+        else if (roll > 0.88) {
+          tile.content = makeTreasure(1); // 普通
+        }else if (roll > 0.85) {
+          tile.content = makeLighthouse(1);
+        }
+      } else {
+        // 屏障内部，使用 has 检查，确保最多一次
+        if (roll > 0.975 && !generatedTypes.has('altar')) {
+          tile.content = makeAltar(1);
+          generatedTypes.add('altar');
+        }
+        else if (roll > 0.95 && !generatedTypes.has('dungeon')) {
+          tile.content = makeDungeon("Dungeon", 1);
+          generatedTypes.add('dungeon');
+        } 
+        else if (roll > 0.91 && !generatedTypes.has('treasure')) {
+          tile.content = makeTreasure(3);
+          generatedTypes.add('treasure');
+        }
+        else if (roll > 0.90 && !generatedTypes.has('treasure')) {
+          tile.content = makeTreasure(2);
+          generatedTypes.add('treasure');
+        }
+        else if (roll > 0.88 && !generatedTypes.has('treasure')) {
+          tile.content = makeTreasure(1);
+          generatedTypes.add('treasure');
+        }
+        else if (roll > 0.85 && !generatedTypes.has('lighthouse')) {
+          tile.content = makeLighthouse(1);
+          generatedTypes.add('lighthouse');
+        }
       }
     });
   }
