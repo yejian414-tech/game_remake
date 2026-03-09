@@ -10,6 +10,7 @@ export class UIManager {
       heroSlots: elements.heroSlots,
       charConfirmBtn: elements.charConfirmBtn,
       charSelectedInfo: elements.charSelectedInfo,
+      difficultyButtons: document.getElementById('difficulty-buttons'),
       mapGenScreen: elements.mapGenScreen,
       hud: elements.hud,
       movementEl: elements.movementEl,
@@ -64,10 +65,26 @@ export class UIManager {
   }
 
   showCharacterSelect(onConfirm) {
-    const { charSelectScreen, heroSlots, charConfirmBtn, charSelectedInfo } = this.els;
+    const { charSelectScreen, heroSlots, charConfirmBtn, charSelectedInfo, difficultyButtons } = this.els;
     charSelectScreen.style.display = 'flex';
     heroSlots.innerHTML = '';
     const selected = [];
+    let selectedDifficulty = 'normal'; // 默认难度
+
+    // 设置难度按钮
+    if (difficultyButtons) {
+      const buttons = difficultyButtons.querySelectorAll('.difficulty-btn');
+      buttons.forEach(btn => {
+        btn.classList.remove('selected');
+        if (btn.textContent === selectedDifficulty) btn.classList.add('selected');
+        btn.onclick = () => {
+          selectedDifficulty = btn.textContent;
+          buttons.forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+        };
+      });
+    }
+
     DataLoader.getAllHeroes().forEach(hero => {
       const card = document.createElement('div');
       card.className = 'hero-card';
@@ -81,7 +98,7 @@ export class UIManager {
       };
       heroSlots.appendChild(card);
     });
-    charConfirmBtn.onclick = () => onConfirm([...selected]);
+    charConfirmBtn.onclick = () => onConfirm([...selected], selectedDifficulty);
   }
 
   hideCharacterSelect() { this.els.charSelectScreen.style.display = 'none'; }

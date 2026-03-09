@@ -13,7 +13,7 @@ import { rollRandomItem } from '../data/items.js';
 
 export class GameController {
   constructor(map, player, ui, camera) {
-    this.map = map; this.player = player; this.ui = ui; this.camera = camera; this.selectedHeroes = []; this.combatManager = null; this.turnCount = 0; this.trapCooldown = 0; this.bossMode = false; this.currentMaxTurns = TurnConfig.MAX_TURNS;
+    this.map = map; this.player = player; this.ui = ui; this.camera = camera; this.selectedHeroes = []; this.combatManager = null; this.turnCount = 0; this.trapCooldown = 0; this.bossMode = false; this.currentMaxTurns = TurnConfig.MAX_TURNS; this.difficulty = 'normal';
     this.fsm = new StateMachine(GameState.INITIALIZING); this._setupStates();
   }
 
@@ -26,7 +26,7 @@ export class GameController {
 
   _setupStates() {
     this.fsm.addState(GameState.CHARACTER_SELECT, {
-      enter: () => this.ui.showCharacterSelect(heroes => { this.selectedHeroes = heroes.map(d => this._createHeroFromData(d)); this.fsm.transition(GameState.STORY); }),
+      enter: () => this.ui.showCharacterSelect((heroes, difficulty) => { this.selectedHeroes = heroes.map(d => this._createHeroFromData(d)); this.difficulty = difficulty; this.fsm.transition(GameState.STORY); }),
       exit: () => this.ui.hideCharacterSelect(),
     });
     this.fsm.addState(GameState.STORY, {
@@ -70,7 +70,7 @@ export class GameController {
   _enterCombat(contentData) {
     const isBoss = contentData.type === TileContentType.BOSS || contentData.type === 'boss';
     const level = contentData.level ?? 1;
-    const enemy = new Enemy(contentData.name || (isBoss ? 'Elite Boss' : 'Monster'), isBoss ? 'boss' : 'dungeon', level, isBoss ? { strength: 20 + level * 6, toughness: 16 + level * 5, agility: 10 + level * 2 } : {});
+    const enemy = new Enemy(contentData.name || (isBoss ? 'Elite Boss' : 'Monster'), isBoss ? 'boss' : 'dungeon', level, isBoss ? { strength: 20 + level * 6, toughness: 16 + level * 5, agility: 10 + level * 2 } : {}, this.difficulty);
     enemy.id = 'e1_' + Date.now();
     this.combatManager = new CombatManager(this.selectedHeroes, [enemy], this.ui); this.combatManager.init(); this.ui.showCombatOverlay(this.combatManager);
   }
