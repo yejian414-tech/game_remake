@@ -2,50 +2,60 @@
 import { Character } from './Character.js';
 
 /**
- * 敌人六维属性按等级自动缩放，也可在构造时传入 statOverrides 逐项覆盖。
+ * Enemy core stats scale automatically by level, but can be overridden
+ * item by item via statOverrides in the constructor.
  *
- * 属性基准（level=1）：
- *   strength  12  → 随等级 +4/级
- *   toughness  8  → +3/级
- *   intellect  6  → +2/级
- *   awareness  8  → +2/级
- *   talent     5  → +1/级
- *   agility    8  → +2/级
+ * Base stats (level=1):
+ * strength  12  -> +4/level
+ * toughness  8  -> +3/level
+ * intellect  6  -> +2/level
+ * awareness  8  -> +2/level
+ * talent     5  -> +1/level
+ * agility    8  -> +2/level
  */
 export class Enemy extends Character {
   /**
    * @param {string} name
-   * @param {string} type  'wolf' | 'skeleton' | 'boss' 等
+   * @param {string} type  'wolf' | 'skeleton' | 'boss' etc.
    * @param {number} level
-   * @param {object} [statOverrides]  覆盖个别基础属性，用于 boss / 精英怪
+   * @param {object} [statOverrides]  Overrides specific base stats, used for bosses / elites
+   * @param {string} [difficultyMode] 'normal' or 'hell'
    */
-  constructor(name, type, level, statOverrides = {}) {
-    const hp = 30 + level * 20;
+  constructor(name, type, level, statOverrides = {}, difficultyMode = 'normal') {
+
+    // Calculate multiplier based on difficulty (Hell mode = 1.8x stats)
+    const multi = difficultyMode === 'hell' ? 1.8 : 1.0;
+
+    // Apply multiplier to HP
+    const hp = Math.floor((30 + level * 20) * multi);
     super(name, hp, hp);
 
-    this.type = 'enemy';   // 保持与 CombatManager 判断一致
-    this.monsterType = type; // 保存原始 type（'wolf' / 'boss' 等）
+    this.type = 'enemy';   // Keep consistent with CombatManager
+    this.monsterType = type; // Store original type
     this.level = level;
+    this.difficulty = difficultyMode; // Save difficulty for rendering
 
-    // ── 六维属性（按等级缩放后可被 statOverrides 覆盖）───────
-    this.strength = statOverrides.strength ?? (12 + (level - 1) * 4);
-    this.toughness = statOverrides.toughness ?? (8 + (level - 1) * 3);
-    this.intellect = statOverrides.intellect ?? (6 + (level - 1) * 2);
-    this.awareness = statOverrides.awareness ?? (8 + (level - 1) * 2);
-    this.talent = statOverrides.talent ?? (5 + (level - 1) * 1);
-    this.agility = statOverrides.agility ?? (8 + (level - 1) * 2);
+    // Apply multiplier to the six core stats
+    this.strength = Math.floor((statOverrides.strength ?? (12 + (level - 1) * 4)) * multi);
+    this.toughness = Math.floor((statOverrides.toughness ?? (8 + (level - 1) * 3)) * multi);
+    this.intellect = Math.floor((statOverrides.intellect ?? (6 + (level - 1) * 2)) * multi);
+    this.awareness = Math.floor((statOverrides.awareness ?? (8 + (level - 1) * 2)) * multi);
+    this.talent = Math.floor((statOverrides.talent ?? (5 + (level - 1) * 1)) * multi);
+    this.agility = Math.floor((statOverrides.agility ?? (8 + (level - 1) * 2)) * multi);
 
-    // 刷新派生属性（attack / defense / speed）
+    // Refresh derived stats (attack / defense / speed)
     this.refreshDerivedStats();
   }
 
-  // ── 绘制 ─────────────────────────────────────────────────
+  // --- Rendering ---
 
   draw(ctx, size) {
     ctx.save();
-    ctx.fillStyle = '#e74c3c';
 
-    // 菱形
+    // Hell mode enemies are rendered in a darker red color
+    ctx.fillStyle = this.difficulty === 'hell' ? '#8b0000' : '#e74c3c';
+
+    // Draw diamond shape
     ctx.translate(this.x, this.y);
     ctx.beginPath();
     ctx.moveTo(0, -size * 0.4);
@@ -55,11 +65,13 @@ export class Enemy extends Character {
     ctx.closePath();
     ctx.fill();
 
-    // 等级标签
+    // Draw level tag with fire emoji for hell mode
     ctx.fillStyle = 'white';
     ctx.font = 'bold 10px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Lv.${this.level}`, 0, 4);
+    const tag = this.difficulty === 'hell' ? `🔥Lv.${this.level}` : `Lv.${this.level}`;
+    ctx.fillText(tag, 0, 4);
+
     ctx.restore();
   }
 }
