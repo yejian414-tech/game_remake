@@ -83,16 +83,40 @@ export class Tile {
 
     const terrainImg = DataLoader.getImage(terrainKey);
     if (terrainImg) {
-      // 绘图区域稍微放大以无缝拼接
-      ctx.drawImage(terrainImg, x - size, y - size, size * 2, size * 2);
-    }
+    // 计算平顶六边形的正确比例
+    const imgW = size * 2;
+    const imgH = size * Math.sqrt(3); // 约 1.732 * size
 
-    // 3. 绘制内容图片 (Dungeon, Boss, Treasure 等图标)
-    if (this.content && visState === 'visible') {
-      const contentImg = DataLoader.getImage(this.content.type);
-      if (contentImg) {
-        const imgSize = size * 1.5;
-        ctx.drawImage(contentImg, x - imgSize/2, y - imgSize/2, imgSize, imgSize);
+    // 绘制图片时，高度偏移应为 imgH / 2
+    // 提示：为了防止格子之间出现极其细微的背景缝隙，可以将宽高稍微放大 1% (乘以 1.01)
+    ctx.drawImage(
+      terrainImg, 
+      x - size,          // X 轴偏移（左顶点位置）
+      y - imgH / 2,      // Y 轴偏移（中心点向上移动半个高度）
+      imgW,              // 宽度
+      imgH               // 高度
+    );
+  }
+
+  // 绘制内容图片 (Dungeon, Boss 等图标)
+  if (this.content && visState === 'visible') {
+    const contentImg = DataLoader.getImage(this.content.type);
+    if (contentImg) {
+    // 设置缩放比例，例如 0.85 表示图标大小为格子的 85%，留下 15% 的边框缝隙
+      const scale = 0.92; 
+    
+    // 计算缩放后的宽度和高度
+      const imgW = (size * 2) * scale;
+      const imgH = (size * Math.sqrt(3)) * scale; 
+
+    // 使用缩放后的宽高，并重新计算起始坐标 (x - 宽/2, y - 高/2) 以确保图标依然在格子中心
+      ctx.drawImage(
+        contentImg,
+        x - imgW / 2, // 水平居中偏移
+        y - imgH / 2, // 垂直居中偏移
+        imgW, 
+        imgH
+      );
       }
     }
 
