@@ -3,7 +3,7 @@ import { DataLoader } from '../data/DataLoader.js';
 
 export class Renderer {
   static renderExploration(ctx, camera, map, player) {
-    // 1. 清理背景并绘制大地图底纹
+    // 1. 清理背景
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
@@ -12,12 +12,14 @@ export class Renderer {
       ctx.drawImage(bgImg, 0, 0, ctx.canvas.width, ctx.canvas.height);
     }
 
-    // 2. 绘制瓦片地图
+    
+
+    // 3. 绘制瓦片地图
     map.draw(ctx, camera, player.q, player.r, 4);
 
-    // 3. 绘制玩家角色
+    // 4. 绘制玩家角色
     ctx.save();
-    ctx.translate(camera.x, camera.y);
+    ctx.translate(Math.round(camera.x), Math.round(camera.y));
     player.draw(ctx, map.tileSize);
     ctx.restore();
   }

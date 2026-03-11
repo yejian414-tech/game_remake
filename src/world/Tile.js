@@ -75,6 +75,18 @@ export class Tile {
       return;
     }
 
+    ctx.save();
+    hexPath();
+    ctx.fillStyle = '#4a7c2c'; // 匹配草地的深色基调
+    ctx.fill();
+    ctx.strokeStyle = '#4a7c2c';
+    ctx.lineWidth = 1; 
+    ctx.stroke();
+    ctx.restore();
+
+
+    const imgW = size * 2;
+    const imgH = size * Math.sqrt(3);
     // 2. 绘制地形图片 (完全取代原来的色块填充)
     let terrainKey = '';
     if (this.type.id === 0) terrainKey = `grass_${this.variant}`; // 草地
@@ -84,17 +96,13 @@ export class Tile {
     const terrainImg = DataLoader.getImage(terrainKey);
     if (terrainImg) {
     // 计算平顶六边形的正确比例
-    const imgW = size * 2;
-    const imgH = size * Math.sqrt(3); // 约 1.732 * size
-
-    // 绘制图片时，高度偏移应为 imgH / 2
-    // 提示：为了防止格子之间出现极其细微的背景缝隙，可以将宽高稍微放大 1% (乘以 1.01)
+    const bleed = 0.5; 
     ctx.drawImage(
       terrainImg, 
-      x - size,          // X 轴偏移（左顶点位置）
-      y - imgH / 2,      // Y 轴偏移（中心点向上移动半个高度）
-      imgW,              // 宽度
-      imgH               // 高度
+      x - size - bleed / 2,      // 水平起点微调
+      y - imgH / 2 - bleed / 2,  // 垂直起点微调
+      imgW + bleed,              // 宽度微增
+      imgH + bleed            // 高度
     );
   }
 
