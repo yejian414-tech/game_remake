@@ -1,8 +1,21 @@
 // src/rendering/Renderer.js
+import { DataLoader } from '../data/DataLoader.js';
+
 export class Renderer {
   static renderExploration(ctx, camera, map, player) {
-    Renderer._clearCanvas(ctx);
+    // 1. 清理背景并绘制大地图底纹
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    const bgImg = DataLoader.getImage('background');
+    if (bgImg) {
+      ctx.drawImage(bgImg, 0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
+
+    // 2. 绘制瓦片地图
     map.draw(ctx, camera, player.q, player.r, 4);
+
+    // 3. 绘制玩家角色
     ctx.save();
     ctx.translate(camera.x, camera.y);
     player.draw(ctx, map.tileSize);
@@ -27,8 +40,6 @@ export class Renderer {
       });
     }
   }
-
-  static _clearCanvas(ctx) { ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); }
 
   static _drawHealthBar(ctx, unit) {
     const BAR_W = 80; const BAR_H = 8; const x = unit.x - BAR_W / 2; const y = unit.y + 45;

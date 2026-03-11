@@ -1,4 +1,5 @@
 // src/world/Tile.js
+import { DataLoader } from '../data/DataLoader.js';
 
 export const TileType = {
   GRASS: { id: 0, color: '#7cfc00', name: 'Plains', moveCost: 1 },
@@ -28,27 +29,11 @@ export function makeTreasure(lootTier = 1) {
   return { type: TileContentType.TREASURE, name: tierName, lootTier };
 }
 export function makeAltar(level = 1) {
-  return {
-    type: TileContentType.ALTAR,
-    name: "Mysterious Altar",
-    level
-  };
+  return { type: TileContentType.ALTAR, name: "Mysterious Altar", level };
 }
 export function makeLighthouse(level = 1) {
-  return {
-    type: TileContentType.LIGHTHOUSE,
-    name: "Ancient Lighthouse",
-    level
-  };
+  return { type: TileContentType.LIGHTHOUSE, name: "Ancient Lighthouse", level };
 }
-
-const CONTENT_COLORS = {
-  [TileContentType.DUNGEON]: '#9400d3',
-  [TileContentType.BOSS]: '#ff2222',
-  [TileContentType.TREASURE]: '#ffd700',
-  [TileContentType.ALTAR]: '#00ffff',
-  [TileContentType.LIGHTHOUSE]: '#ffcc00',
-};
 
 export class Tile {
   constructor(q, r, type = TileType.GRASS) {
@@ -57,6 +42,8 @@ export class Tile {
     this.type = type;
     this.content = null;
     this.isRevealed = false;
+    // 随机选择一个变体 (1-4)
+    this.variant = Math.floor(Math.random() * 4) + 1;
   }
 
   getCanvasPos(size) {
@@ -66,16 +53,9 @@ export class Tile {
     };
   }
 
-  /**
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {number} size
-   * @param {boolean} isSelected
-   * @param {'hidden'|'explored'|'visible'} visState
-   */
   draw(ctx, size, isSelected = false, visState = 'visible') {
     const { x, y } = this.getCanvasPos(size);
 
-    // ── 辅助：绘制六边形路径 ────────────────────────────────
     const hexPath = () => {
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
@@ -87,65 +67,44 @@ export class Tile {
       ctx.closePath();
     };
 
-    // ── 完全未探索：只画黑格，早退 ─────────────────────────
+    // 1. 处理战争迷雾 (完全未探索)
     if (visState === 'hidden') {
       hexPath();
       ctx.fillStyle = '#0a0a14';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
       return;
     }
 
-    // ── 已探索 / 可见：正常绘制地形 ────────────────────────
-    hexPath();
-    ctx.fillStyle = this.type.color;
-    ctx.fill();
-    ctx.strokeStyle = isSelected ? 'white' : 'rgba(0,0,0,0.1)';
-    ctx.lineWidth = isSelected ? 3 : 1;
-    ctx.stroke();
+    // 2. 绘制地形图片 (完全取代原来的色块填充)
+    let terrainKey = '';
+    if (this.type.id === 0) terrainKey = `grass_${this.variant}`; // 草地
+    else if (this.type.id === 3) terrainKey = `barrier_${this.variant}`; // 障碍物
+    else terrainKey = `grass_1`; // 默认地形
 
-    // ── 内容图标（只在可见状态下显示，explored 时隐藏内容）──
-    if (this.content && visState === 'visible') {
-      const iconColor = CONTENT_COLORS[this.content.type] ?? 'red';
-      const iconR = size * 0.38;
-
-      ctx.fillStyle = iconColor;
-      ctx.beginPath();
-
-      if (this.content.type === TileContentType.TREASURE) {
-        ctx.moveTo(x, y - iconR);
-        ctx.lineTo(x + iconR, y);
-        ctx.lineTo(x, y + iconR);
-        ctx.lineTo(x - iconR, y);
-        ctx.closePath();
-      } else if (this.content.type === TileContentType.ALTAR){
-        ctx.fillText('✦', x, y); 
-      } else if (this.content.type === TileContentType.BOSS) {
-        ctx.arc(x, y, iconR, 0, Math.PI * 2);
-      } else {
-        ctx.arc(x, y, iconR * 0.8, 0, Math.PI * 2);
-      }
-      ctx.fill();
-
-      ctx.fillStyle = 'white';
-      ctx.font = `bold ${Math.round(size * 0.3)}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      if (this.content.type === TileContentType.BOSS) ctx.fillText('B', x, y);
-      else if (this.content.type === TileContentType.DUNGEON) ctx.fillText(`${this.content.level}`, x, y);
-      else if (this.content.type === TileContentType.TREASURE) {
-        if (this.content.lootTier === 3) ctx.fillText('💎', x, y);
-        else if (this.content.lootTier === 2) ctx.fillText('🔷', x, y);
-        else ctx.fillText('💰', x, y);
-      }
-
-      ctx.textBaseline = 'alphabetic';
+    const terrainImg = DataLoader.getImage(terrainKey);
+    if (terrainImg) {
+      // 绘图区域稍微放大以无缝拼接
+      ctx.drawImage(terrainImg, x - size, y - size, size * 2, size * 2);
     }
 
-    // ── 已探索但视野外：叠半透明暗色蒙版 ──────────────────
+    // 3. 绘制内容图片 (Dungeon, Boss, Treasure 等图标)
+    if (this.content && visState === 'visible') {
+      const contentImg = DataLoader.getImage(this.content.type);
+      if (contentImg) {
+        const imgSize = size * 1.5;
+        ctx.drawImage(contentImg, x - imgSize/2, y - imgSize/2, imgSize, imgSize);
+      }
+    }
+
+    // 4. 绘制选中边框
+    if (isSelected) {
+      hexPath();
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    // 5. 已探索但视野外：叠半透明暗色蒙版
     if (visState === 'explored') {
       hexPath();
       ctx.fillStyle = 'rgba(10, 10, 20, 0.55)';
