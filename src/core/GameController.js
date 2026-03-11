@@ -1,7 +1,7 @@
 // src/core/GameController.js
 import { GameState, MapConfig, TurnConfig } from './Constants.js';
 import { HexMap } from '../world/HexMap.js';
-import { TileContentType, TileType, makeBoss } from '../world/Tile.js'; // 修正导入
+import { TileContentType } from '../world/Tile.js';
 import { StateMachine } from './StateMachine.js';
 import { CombatManager } from './CombatManager.js';
 import { Enemy } from '../entities/Enemy.js';
@@ -13,34 +13,20 @@ import { rollRandomItem } from '../data/items.js';
 
 export class GameController {
   constructor(map, player, ui, camera) {
-    this.map = map; this.player = player; this.ui = ui; this.camera = camera; 
-    this.selectedHeroes = []; this.combatManager = null; this.turnCount = 0; 
-    this.trapCooldown = 0; this.bossMode = false; this.currentMaxTurns = TurnConfig.MAX_TURNS; 
-    this.difficulty = 'normal';
-    
-    this.currentBGM = null; // 记录当前正在播放的音频
+    this.map = map; this.player = player; this.ui = ui; this.camera = camera; this.selectedHeroes = []; this.combatManager = null; this.turnCount = 0; this.trapCooldown = 0; this.bossMode = false; this.currentMaxTurns = TurnConfig.MAX_TURNS;
     this.fsm = new StateMachine(GameState.INITIALIZING); this._setupStates();
   }
 
-  // 播放音乐的方法
-  playBGM(key) {
-    if (this.currentBGM) {
-      this.currentBGM.pause();
-      this.currentBGM.currentTime = 0;
-    }
-    const nextBGM = DataLoader.getAudio(key);
-    if (nextBGM) {
-      nextBGM.play().catch(e => console.warn("自动播放被拦截:", e));
-      this.currentBGM = nextBGM;
-    }
+  hexToPixel(q, r, size) {
+    return {
+      x: size * (3 / 2 * q),
+      y: size * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
+    };
   }
 
   _setupStates() {
     this.fsm.addState(GameState.CHARACTER_SELECT, {
-      enter: () => this.ui.showCharacterSelect((heroes, difficulty) => { 
-        this.selectedHeroes = heroes.map(d => this._createHeroFromData(d)); 
-        this.difficulty = difficulty; this.fsm.transition(GameState.STORY); 
-      }),
+      enter: () => this.ui.showCharacterSelect(heroes => { this.selectedHeroes = heroes.map(d => this._createHeroFromData(d)); this.fsm.transition(GameState.STORY); }),
       exit: () => this.ui.hideCharacterSelect(),
     });
     this.fsm.addState(GameState.STORY, {
@@ -50,27 +36,20 @@ export class GameController {
     this.fsm.addState(GameState.MAP_GENERATION, {
       enter: () => this.ui.showMapGeneration(this.selectedHeroes, () => {
         this.map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE); this.map.generateEvents();
-        this.player.setGridPos(-MapConfig.RADIUS, MapConfig.RADIUS, this.map); 
-        this.map.revealAround(-MapConfig.RADIUS, MapConfig.RADIUS, 5);
+        // 玩家出生地向内移动一格
+        const startQ = -MapConfig.RADIUS + 1;
+        const startR = MapConfig.RADIUS - 1;
+        this.player.setGridPos(startQ, startR, this.map);
+        this.map.revealAround(startQ, startR, 5);
         this.fsm.transition(GameState.MAP_EXPLORATION);
       }),
       exit: () => this.ui.hideMapGeneration(),
     });
-    this.fsm.addState(GameState.MAP_EXPLORATION, { 
-      enter: () => { 
-        this.playBGM('map_bgm'); // 进入地图播放 map.mp3
-        this.turnCount = 0; this.ui.showMapUI(); this._startTurn(); 
-      }, 
-    });
+    this.fsm.addState(GameState.MAP_EXPLORATION, { enter: () => { this.turnCount = 0; this.ui.showMapUI(); this._startTurn(); }, });
     this.fsm.addState(GameState.COMBAT, {
-      enter: contentData => {
-        this.playBGM('fight_bgm'); // 进入战斗播放 fight.mp3
-        this._enterCombat(contentData);
-      },
+      enter: contentData => this._enterCombat(contentData),
       exit: () => {
-        this.playBGM('map_bgm'); // 战斗结束切换回地图音乐
-        const won = this.combatManager?.phase === 'WIN'; this._exitCombat(); 
-        this.ui.updatePartyStatus(this.selectedHeroes);
+        const won = this.combatManager?.phase === 'WIN'; this._exitCombat(); this.ui.updatePartyStatus(this.selectedHeroes);
         if (won) {
           const loot = rollRandomItem();
           setTimeout(() => {
@@ -87,19 +66,15 @@ export class GameController {
       },
     });
     this.fsm.addState(GameState.GAME_OVER, {
-      enter: () => {
-        if (this.currentBGM) this.currentBGM.pause(); // 游戏结束停止音乐
-        this.ui.showGameOver();
-      },
+      enter: () => this.ui.showGameOver(),
       exit: () => {},
     });
   }
 
-  // ... 其余 GameController 方法（update, render, movePlayer 等）保持不变
   _enterCombat(contentData) {
     const isBoss = contentData.type === TileContentType.BOSS || contentData.type === 'boss';
     const level = contentData.level ?? 1;
-    const enemy = new Enemy(contentData.name || (isBoss ? 'Elite Boss' : 'Monster'), isBoss ? 'boss' : 'dungeon', level, isBoss ? { strength: 20 + level * 6, toughness: 16 + level * 5, agility: 10 + level * 2 } : {}, this.difficulty);
+    const enemy = new Enemy(contentData.name || (isBoss ? 'Elite Boss' : 'Monster'), isBoss ? 'boss' : 'dungeon', level, isBoss ? { strength: 20 + level * 6, toughness: 16 + level * 5, agility: 10 + level * 2 } : {});
     enemy.id = 'e1_' + Date.now();
     this.combatManager = new CombatManager(this.selectedHeroes, [enemy], this.ui); this.combatManager.init(); this.ui.showCombatOverlay(this.combatManager);
   }
@@ -121,18 +96,34 @@ export class GameController {
     this.player.movementPoints = total; this.ui.updateMovementUI(total); this.ui.updatePartyStatus(this.selectedHeroes);
     if (this.trapCooldown > 0) this.trapCooldown--;
     if (!this.bossMode && this.turnCount === TurnConfig.MAX_TURNS) {
-      this.bossMode = true; this.turnCount = 0; this.currentMaxTurns = 10;
+      // 进入boss模式
+      this.bossMode = true;
+      this.turnCount = 0;
+      this.currentMaxTurns = 10;
       this.ui.updateBossMode();
+      // 震动屏幕
       document.body.classList.add('shake');
       setTimeout(() => document.body.classList.remove('shake'), 500);
+
+      // 点亮boss区域视野
       this.map.revealAround(20, 0, 10);
+
+      // 生成树林和boss
       for (const tile of this.map.tiles.values()) {
-        const dq = tile.q - 20, dr = tile.r - 0;
-        if (Math.max(Math.abs(dq), Math.abs(dr), Math.abs(-dq - dr)) <= 4) tile.type = TileType.FOREST;
+        const dq = tile.q - 20;
+        const dr = tile.r - 0;
+        const ds = -dq - dr;
+        const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
+        if (dist <= 4) {
+          tile.type = TileType.FOREST;
+        }
       }
       const bossTile = this.map.getTile(20, 0);
-      if (bossTile) this.map.placeContent(20, 0, makeBoss("Final Boss", 10));
+      if (bossTile) {
+        this.map.placeContent(20, 0, makeBoss("Final Boss", 10));
+      }
     } else if (this.bossMode && this.turnCount === this.currentMaxTurns) {
+      // boss模式超时，游戏结束
       this.fsm.transition(GameState.GAME_OVER);
     }
   }

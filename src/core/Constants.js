@@ -27,7 +27,7 @@ export const CombatPhase = {
 
 // ── 地图全局配置（main.js 和 GameController.js 统一读这里）──
 export const MapConfig = {
-  RADIUS: 20,   // 地图半径
+  RADIUS: 11,   // 地图半径
   TILE_SIZE: 40, // 格子像素尺寸
   PADDING: 100,  // 初始视角边缘留白
 };

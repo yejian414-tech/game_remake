@@ -31,26 +31,13 @@ export class HexMap {
   getTile(q, r) { return this.tiles.get(`${q},${r}`); }
 
   generateBarrier() {
-    const q0 = -this.radius;
-    const r0 = this.radius;
-    const barrierTiles = [];
+    // 将真正的最外层瓷砖设为boundary并标记为已揭示
     for (const tile of this.tiles.values()) {
-      const dq = tile.q - q0;
-      const dr = tile.r - r0;
-      const ds = -dq - dr;
-      const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
-      if (dist === 4) {
-        barrierTiles.push(tile);
+      const dist = Math.max(Math.abs(tile.q), Math.abs(tile.r), Math.abs(tile.q + tile.r));
+      if (dist === this.radius) {
+        tile.type = TileType.BOUNDARY;
+        tile.isRevealed = true;
       }
-    }
-    // 随机选择一个作为出口
-    if (barrierTiles.length > 0) {
-      const exitIndex = Math.floor(this.rng.next() * barrierTiles.length);
-      barrierTiles.forEach((tile, index) => {
-        if (index !== exitIndex) {
-          tile.type = TileType.BARRIER;
-        }
-      });
     }
   }
 

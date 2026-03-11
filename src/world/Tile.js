@@ -6,6 +6,7 @@ export const TileType = {
   FOREST: { id: 1, color: '#228b22', name: 'Forest', moveCost: 1 },
   MOUNTAIN: { id: 2, color: '#8b4513', name: 'Mountains', moveCost: 2 },
   BARRIER: { id: 3, color: '#808080', name: 'Barrier', moveCost: Infinity },
+  BOUNDARY: { id: 4, color: '#8b4513', name: 'Boundary', moveCost: Infinity },
 };
 
 export const TileContentType = {
@@ -78,13 +79,21 @@ export class Tile {
     // 2. 绘制地形图片 (完全取代原来的色块填充)
     let terrainKey = '';
     if (this.type.id === 0) terrainKey = `grass_${this.variant}`; // 草地
+    else if (this.type.id === 1) terrainKey = `forest_${this.variant}`; // 森林
+    else if (this.type.id === 2) terrainKey = `mountain_${this.variant}`; // 山脉
     else if (this.type.id === 3) terrainKey = `barrier_${this.variant}`; // 障碍物
+    else if (this.type.id === 4) terrainKey = `boundary_${this.variant}`; // 边界
     else terrainKey = `grass_1`; // 默认地形
 
     const terrainImg = DataLoader.getImage(terrainKey);
     if (terrainImg) {
       // 绘图区域稍微放大以无缝拼接
       ctx.drawImage(terrainImg, x - size, y - size, size * 2, size * 2);
+    } else {
+      // 如果没有贴图资源，用颜色填充
+      hexPath();
+      ctx.fillStyle = this.type.color;
+      ctx.fill();
     }
 
     // 3. 绘制内容图片 (Dungeon, Boss, Treasure 等图标)
