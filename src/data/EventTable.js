@@ -25,7 +25,7 @@ export const VILLAGE_LIST = [
     map: 'main',
     q: -6,
     r: 2,
-    name: '村庄'
+    name: '森林村庄'
   }
   // 后续可继续添加更多村庄
 ];
@@ -55,7 +55,25 @@ export class EventTable {
           },
           {
             text: '任务',
-            onClick: () => { gameController.ui.showEvent('任务', '（此处可实现任务列表）', [{ text: '返回', onClick: () => EventTable.handleVillage(gameController, tile, content) }]); }
+            onClick: () => { 
+              gameController.ui.showEvent(
+                '📋 任务',
+                '救援商队\n\n村长焦急地对你说：\n"冒险者，你来的正好。"\n"一支商队路过这里，他们的护卫在 村子东北方向 被怪物拖住了。"\n"如果他们死了，我们就彻底失去补给了。"',
+                [
+                  { 
+                    text: '接取', 
+                    onClick: () => { 
+                      gameController._startMission('救援商队', 5);
+                      gameController.ui.showEvent('✓ 任务已接取', '你已接取任务【救援商队】\n请前往村子东北方向救援商队护卫。\n\n回合限制: 5', [{ text: '返回', onClick: () => EventTable.handleVillage(gameController, tile, content) }]); 
+                    } 
+                  },
+                  { 
+                    text: '返回', 
+                    onClick: () => EventTable.handleVillage(gameController, tile, content) 
+                  }
+                ]
+              ); 
+            }
           },
           {
             text: '休息',

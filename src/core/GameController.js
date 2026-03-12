@@ -28,6 +28,7 @@ export class GameController {
     this.trapCooldown = 0;
     this.bossMode = false;
     this.currentMaxTurns = TurnConfig.MAX_TURNS;
+    this.currentMissionName = null;
     this.gameStory = new GameStory(ui);
     this.fsm = new StateMachine(GameState.INITIALIZING);
     this._setupStates();
@@ -243,6 +244,14 @@ export class GameController {
     this.ui.updatePartyStatus(this.selectedHeroes);
     // 强制重绘
     this.fsm.transition(GameState.MAP_EXPLORATION);
+  }
+
+  _startMission(missionName, maxTurns = 5) {
+    this.currentMissionName = missionName;
+    this.currentMaxTurns = maxTurns;
+    this.turnCount = 0;
+    this.ui.updateProgressBar(0, maxTurns);
+    this.ui.updateProgressBarTitle(`🎯 ${missionName}`);
   }
 
   _executeTrapRoll() {

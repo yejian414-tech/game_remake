@@ -120,6 +120,11 @@ export class UIManager {
     bar.classList.toggle('danger', turn >= maxTurns - 3);
   }
 
+  updateProgressBarTitle(title) {
+    const titleEl = document.querySelector('#top-progress-header span:first-child');
+    if (titleEl) titleEl.textContent = title;
+  }
+
   updateBossMode() {
     const title = document.querySelector('#top-progress-header span:first-child');
     const desc = document.querySelector('#top-progress-header span:last-child');
