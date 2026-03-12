@@ -29,7 +29,7 @@ export class HexMap {
       for (let r = r1; r <= r2; r++) {
         let type = TileType.GRASS;
         const roll = this.rng.next();
-        if (roll > 0.96) type = TileType.MOUNTAIN;
+        if (roll > 0.90) type = TileType.MOUNTAIN;
         else if (roll > 0.82) type = TileType.FOREST;
         this.tiles.set(`${q},${r}`, new Tile(q, r, type));
       }
@@ -103,8 +103,9 @@ export class HexMap {
    * @param {number} playerQ   玩家当前格 q（用于计算当前视野）
    * @param {number} playerR   玩家当前格 r
    * @param {number} [sightRadius=2]  可见半径（格数）
+   * @param {boolean} [debugMode=false]  是否显示坐标
    */
-  draw(ctx, camera, playerQ, playerR, sightRadius = 4) {
+  draw(ctx, camera, playerQ, playerR, sightRadius = 4, debugMode = false) {
     ctx.save();
     ctx.translate(camera.x, camera.y);
 
@@ -123,7 +124,7 @@ export class HexMap {
         visState = dist <= sightRadius ? 'visible' : 'explored';
       }
 
-      tile.draw(ctx, this.tileSize, false, visState);
+      tile.draw(ctx, this.tileSize, false, visState, debugMode);
     });
 
     ctx.restore();

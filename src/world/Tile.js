@@ -4,7 +4,7 @@ import { DataLoader } from '../data/DataLoader.js';
 export const TileType = {
   GRASS: { id: 0, color: '#7cfc00', name: 'Plains', moveCost: 1 },
   FOREST: { id: 1, color: '#228b22', name: 'Forest', moveCost: 1 },
-  MOUNTAIN: { id: 2, color: '#8b4513', name: 'Mountains', moveCost: 2 },
+  MOUNTAIN: { id: 2, color: '#8b4513', name: 'Mountains', moveCost: Infinity },
   BARRIER: { id: 3, color: '#808080', name: 'Barrier', moveCost: Infinity },
   BOUNDARY: { id: 4, color: '#8b4513', name: 'Boundary', moveCost: Infinity },
 };
@@ -59,7 +59,7 @@ export class Tile {
     };
   }
 
-  draw(ctx, size, isSelected = false, visState = 'visible') {
+  draw(ctx, size, isSelected = false, visState = 'visible', debugMode = false) {
     const { x, y } = this.getCanvasPos(size);
 
     const hexPath = () => {
@@ -86,7 +86,7 @@ export class Tile {
     ctx.fillStyle = '#4a7c2c'; // 匹配草地的深色基调
     ctx.fill();
     ctx.strokeStyle = '#4a7c2c';
-    ctx.lineWidth = 1; 
+    ctx.lineWidth = 1;
     ctx.stroke();
     ctx.restore();
 
@@ -105,9 +105,9 @@ export class Tile {
     const terrainImg = DataLoader.getImage(terrainKey);
     if (terrainImg) {
     // 计算平顶六边形的正确比例
-    const bleed = 0.5; 
+    const bleed = 0.5;
     ctx.drawImage(
-      terrainImg, 
+      terrainImg,
       x - size - bleed / 2,      // 水平起点微调
       y - imgH / 2 - bleed / 2,  // 垂直起点微调
       imgW + bleed,              // 宽度微增
@@ -120,18 +120,18 @@ export class Tile {
     const contentImg = DataLoader.getImage(this.content.type);
     if (contentImg) {
     // 设置缩放比例，例如 0.85 表示图标大小为格子的 85%，留下 15% 的边框缝隙
-      const scale = 0.92; 
-    
+      const scale = 0.92;
+
     // 计算缩放后的宽度和高度
       const imgW = (size * 2) * scale;
-      const imgH = (size * Math.sqrt(3)) * scale; 
+      const imgH = (size * Math.sqrt(3)) * scale;
 
     // 使用缩放后的宽高，并重新计算起始坐标 (x - 宽/2, y - 高/2) 以确保图标依然在格子中心
       ctx.drawImage(
         contentImg,
         x - imgW / 2, // 水平居中偏移
         y - imgH / 2, // 垂直居中偏移
-        imgW, 
+        imgW,
         imgH
       );
       }
@@ -150,6 +150,21 @@ export class Tile {
       hexPath();
       ctx.fillStyle = 'rgba(10, 10, 20, 0.55)';
       ctx.fill();
+    }
+
+    // 6. 调试模式：显示坐标
+    if (debugMode && visState === 'visible') {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      const boxW = 40;
+      const boxH = 20;
+      ctx.fillRect(x - boxW / 2, y - boxH / 2, boxW, boxH);
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${this.q},${this.r}`, x, y);
+      ctx.restore();
     }
   }
 }

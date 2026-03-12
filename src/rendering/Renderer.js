@@ -2,6 +2,8 @@
 import { DataLoader } from '../data/DataLoader.js';
 
 export class Renderer {
+  static debugMode = false;
+
   static renderExploration(ctx, camera, map, player) {
     // 1. 清理背景
     ctx.fillStyle = '#1a1a2e';
@@ -12,10 +14,10 @@ export class Renderer {
       ctx.drawImage(bgImg, 0, 0, ctx.canvas.width, ctx.canvas.height);
     }
 
-    
 
-    // 3. 绘制瓦片地图
-    map.draw(ctx, camera, player.q, player.r, 4);
+
+    // 3. 绘制瓦片地图（传递调试模式）
+    map.draw(ctx, camera, player.q, player.r, 4, this.debugMode);
 
     // 4. 绘制玩家角色
     ctx.save();

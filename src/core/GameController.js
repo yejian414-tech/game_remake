@@ -163,7 +163,9 @@ export class GameController {
     const curMap = this.currentMapName === '新手村' ? this.noviceVillage : this.map;
     const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr)), tile = curMap.getTile(q, r);
     if (!tile) return;
-    const moveCost = (tile.type.moveCost ?? 1) * dist;
+    // 检查是否可通行（moveCost 为 Infinity 表示不可通行）
+    if (!isFinite(tile.type.moveCost)) return;
+    const moveCost = tile.type.moveCost * dist;
     if (this.player.movementPoints < moveCost) return;
     this.player.setGridPos(q, r, curMap); this.player.movementPoints -= moveCost; this.ui.updateMovementUI(this.player.movementPoints);
     curMap.revealAround(q, r, 2); this._handleTileContent(tile); this.ui.updatePartyStatus(this.selectedHeroes);

@@ -7,6 +7,7 @@ import { makePortal } from './src/world/Tile.js';
 import { Camera } from './src/world/Camera.js';
 import { Player } from './src/entities/Player.js';
 import { DataLoader } from './src/data/DataLoader.js';
+import { Renderer } from './src/rendering/Renderer.js';
 // ⚠️ 保持你的容错修复：严格匹配你本地的小写文件名 Inputhandler.js
 import { InputHandler } from './src/core/Inputhandler.js';
 import { UIManager } from './src/ui/UIManager.js';
@@ -136,6 +137,14 @@ function startGame() {
         gameController
     );
     inputHandler.bind(document.getElementById('end-turn-btn'));
+
+    // 调试模式按钮
+    const debugBtn = document.getElementById('debug-toggle-btn');
+    debugBtn.addEventListener('click', () => {
+      Renderer.debugMode = !Renderer.debugMode;
+      debugBtn.textContent = Renderer.debugMode ? '🐛 Debug: ON' : '🐛 Debug: OFF';
+      debugBtn.style.background = Renderer.debugMode ? '#27ae60' : '#e67e22';
+    });
 
     // 启动状态机进入角色选择
     gameController.fsm.transition(GameState.CHARACTER_SELECT);
