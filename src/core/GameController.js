@@ -1,7 +1,8 @@
 // src/core/GameController.js
 import { GameState, MapConfig, TurnConfig, MapPresets } from './Constants.js';
 import { HexMap, createMapByPreset } from '../world/HexMap.js';
-import { TileContentType, makePortal, makeBoss, TileType } from '../world/Tile.js';
+import { TileContentType, makePortal, makeBoss, TileType, makeNPC } from '../world/Tile.js';
+import { NPC_LIST } from '../data/EventTable.js';
 import { StateMachine } from './StateMachine.js';
 import { CombatManager } from './CombatManager.js';
 import { Enemy } from '../entities/Enemy.js';
@@ -62,6 +63,17 @@ export class GameController {
         this.map.placeContent(mainQ, mainR, makePortal('新手村', noviceQ, noviceR), 0);
         // 新手村出生地放传送阵
         this.noviceVillage.placeContent(noviceQ, noviceR, makePortal('主地图', mainQ, mainR), 0);
+
+        // 迷失森林(-8,7)放置受伤的村民NPC
+        // 批量放置所有NPC
+        for (const npc of NPC_LIST) {
+          const targetMap = npc.map === 'main' ? this.map : this.noviceVillage;
+          targetMap.placeContent(
+            npc.q, npc.r,
+            makeNPC(npc.name, npc.dialogue, npc.options || {}),
+            0
+          );
+        }
         // 玩家出生地在新手村
         this.currentMapName = '新手村';
         this.player.setGridPos(noviceQ, noviceR, this.noviceVillage);
@@ -191,6 +203,8 @@ export class GameController {
       EventTable.handleLighthouse(this, tile);
     } else if (c.type === TileContentType.PORTAL) {
       EventTable.handlePortal(this, tile, c);
+    } else if (c.type === TileContentType.NPC) {
+      EventTable.handleNPC(this, tile, c);
     }
   }
   // 切换地图

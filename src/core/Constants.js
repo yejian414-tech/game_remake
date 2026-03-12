@@ -1,7 +1,7 @@
 // ── 多地图参数预设（统一管理所有地图参数）──
 export const MapPresets = {
   main: {
-    name: '主地图',
+    name: '迷失森林',
     radius: 11,
     tileSize: 40,
     eventLogic: 'default', // 事件分布逻辑标识，后续可扩展

@@ -1,7 +1,19 @@
+// 集中管理所有NPC配置
+export const NPC_LIST = [
+  {
+    map: 'main',
+    q: -8,
+    r: 7,
+    name: '受伤的村民',
+    dialogue: '求求你……森林变了……树在流血……怪物从地里爬出来。\n请求您带我去北边的村庄。',
+    iconType: 'redCircle' // 新增：图标类型
+  }
+  // 后续可继续添加更多NPC
+];
 // src/data/EventTable.js
 // 事件表管理 - 集中所有事件定义和生成概率
 
-import { TileContentType, makeDungeon, makeBoss, makeTreasure, makeAltar, makeLighthouse } from '../world/Tile.js';
+import { TileContentType, makeDungeon, makeBoss, makeTreasure, makeAltar, makeLighthouse, makeNPC } from '../world/Tile.js';
 import { GameState } from '../core/Constants.js';
 import { rollSpeed } from '../core/Dice.js';
 import { rollRandomItem } from './items.js';
@@ -63,6 +75,14 @@ export class EventTable {
       description: 'Teleport?',
       tileContentType: TileContentType.PORTAL,
       handler: 'handlePortal'
+    },
+    NPC: {
+      id: 'npc',
+      title: '👤 Village NPC',
+      spawnChance: 0,
+      description: 'Talk to the villager',
+      tileContentType: TileContentType.NPC,
+      handler: 'handleNPC'
     }
   };
 
@@ -288,6 +308,25 @@ export class EventTable {
   }
 
   /**
+   * 处理 NPC 事件
+   * @param {Object} gameController - 游戏控制器
+   * @param {Object} tile - 地块
+   * @param {Object} content - 内容对象 (NPC)
+   */
+  static handleNPC(gameController, tile, content) {
+    gameController.ui.showEvent(
+      `👤 ${content.name}`,
+      content.dialogue || "Hello traveler!",
+      [
+        {
+          text: "continue",
+          onClick: () => { }
+        }
+      ]
+    );
+  }
+
+  /**
    * 获取陷阱生成概率
    * @returns {number} 概率 (0-1)
    */
@@ -341,6 +380,8 @@ export class EventTable {
         return makeTreasure(tier);
       case 'LIGHTHOUSE':
         return makeLighthouse(1);
+      case 'NPC':
+        return makeNPC('Villager', 'Welcome, traveler!');
       default:
         return null;
     }

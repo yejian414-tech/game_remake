@@ -4,7 +4,7 @@ import { DataLoader } from '../data/DataLoader.js';
 export const TileType = {
   GRASS: { id: 0, color: '#7cfc00', name: 'Plains', moveCost: 1 },
   FOREST: { id: 1, color: '#228b22', name: 'Forest', moveCost: 1 },
-  MOUNTAIN: { id: 2, color: '#8b4513', name: 'Mountains', moveCost: Infinity },
+  MOUNTAIN: { id: 2, color: '#8b4513', name: 'Mountains', moveCost: 2 },
   BARRIER: { id: 3, color: '#808080', name: 'Barrier', moveCost: Infinity },
   BOUNDARY: { id: 4, color: '#8b4513', name: 'Boundary', moveCost: Infinity },
 };
@@ -16,7 +16,24 @@ export const TileContentType = {
   ALTAR: 'altar', 
   LIGHTHOUSE: 'lighthouse',
   PORTAL: 'portal', // 传送阵
+  NPC: 'npc', // 新增NPC类型
 };
+// NPC内容生成器
+/**
+ * 创建一个NPC事件内容对象
+ * @param {string} name - NPC名字
+ * @param {string} dialogue - NPC对话文本
+ * @param {Object} [options] - 额外选项，如基于物品的能力
+ * @returns {Object}
+ */
+export function makeNPC(name, dialogue = '你好，旅行者！', options = {}) {
+  return {
+    type: TileContentType.NPC,
+    name,
+    dialogue,
+    ...options // 支持扩展：如iconType、基于物品的能力等
+  };
+}
 // 传送阵内容生成器
 export function makePortal(targetMap, targetQ, targetR) {
   return { type: TileContentType.PORTAL, name: '传送阵', targetMap, targetQ, targetR };
@@ -86,7 +103,7 @@ export class Tile {
     ctx.fillStyle = '#4a7c2c'; // 匹配草地的深色基调
     ctx.fill();
     ctx.strokeStyle = '#4a7c2c';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1; 
     ctx.stroke();
     ctx.restore();
 
@@ -105,9 +122,9 @@ export class Tile {
     const terrainImg = DataLoader.getImage(terrainKey);
     if (terrainImg) {
     // 计算平顶六边形的正确比例
-    const bleed = 0.5;
+    const bleed = 0.5; 
     ctx.drawImage(
-      terrainImg,
+      terrainImg, 
       x - size - bleed / 2,      // 水平起点微调
       y - imgH / 2 - bleed / 2,  // 垂直起点微调
       imgW + bleed,              // 宽度微增
@@ -115,27 +132,47 @@ export class Tile {
     );
   }
 
-  // 绘制内容图片 (Dungeon, Boss 等图标)
+  // 绘制内容图片 (Dungeon, Boss, NPC等图标)
   if (this.content && visState === 'visible') {
-    const contentImg = DataLoader.getImage(this.content.type);
-    if (contentImg) {
-    // 设置缩放比例，例如 0.85 表示图标大小为格子的 85%，留下 15% 的边框缝隙
-      const scale = 0.92;
-
-    // 计算缩放后的宽度和高度
-      const imgW = (size * 2) * scale;
-      const imgH = (size * Math.sqrt(3)) * scale;
-
-    // 使用缩放后的宽高，并重新计算起始坐标 (x - 宽/2, y - 高/2) 以确保图标依然在格子中心
-      ctx.drawImage(
-        contentImg,
-        x - imgW / 2, // 水平居中偏移
-        y - imgH / 2, // 垂直居中偏移
-        imgW,
-        imgH
-      );
+    if (this.content.type === TileContentType.NPC) {
+      // 根据iconType渲染不同NPC图标，默认红圈
+      const iconType = this.content.iconType || 'redCircle';
+      if (iconType === 'redCircle') {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.55, 0, Math.PI * 2);
+        ctx.fillStyle = 'red';
+        ctx.globalAlpha = 0.85;
+        ctx.shadowColor = '#fff';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
+        ctx.restore();
+      }
+      // 未来可扩展更多iconType
+    } else {
+      const contentImg = DataLoader.getImage(this.content.type);
+      if (contentImg) {
+        // 设置缩放比例，例如 0.85 表示图标大小为格子的 85%，留下 15% 的边框缝隙
+        const scale = 0.92;
+        // 计算缩放后的宽度和高度
+        const imgW = (size * 2) * scale;
+        const imgH = (size * Math.sqrt(3)) * scale;
+        // 使用缩放后的宽高，并重新计算起始坐标 (x - 宽/2, y - 高/2) 以确保图标依然在格子中心
+        ctx.drawImage(
+          contentImg,
+          x - imgW / 2, // 水平居中偏移
+          y - imgH / 2, // 垂直居中偏移
+          imgW,
+          imgH
+        );
       }
     }
+  }
 
     // 4. 绘制选中边框
     if (isSelected) {
@@ -152,18 +189,18 @@ export class Tile {
       ctx.fill();
     }
 
-    // 6. 调试模式：显示坐标
-    if (debugMode && visState === 'visible') {
+    // 6. debug模式下显示坐标
+    if (debugMode && visState !== 'hidden') {
       ctx.save();
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      const boxW = 40;
-      const boxH = 20;
-      ctx.fillRect(x - boxW / 2, y - boxH / 2, boxW, boxH);
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 10px monospace';
+      ctx.font = `${Math.floor(size * 0.45)}px monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`${this.q},${this.r}`, x, y);
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#222';
+      ctx.lineWidth = 2;
+      const coordText = `(${this.q},${this.r})`;
+      ctx.strokeText(coordText, x, y);
+      ctx.fillText(coordText, x, y);
       ctx.restore();
     }
   }
