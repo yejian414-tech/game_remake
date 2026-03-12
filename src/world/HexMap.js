@@ -1,3 +1,13 @@
+// 新手村地图工厂
+import { MapConfig, MapPresets } from '../core/Constants.js';
+export function createMapByPreset(presetName) {
+  const preset = MapPresets[presetName];
+  if (!preset) throw new Error('地图预设未找到: ' + presetName);
+  const map = new HexMap(preset.radius, preset.tileSize, SeededRandom.randomSeed());
+  // 事件地形逻辑可根据preset.eventLogic扩展
+  map.generateEvents();
+  return map;
+}
 // src/world/HexMap.js
 import { Tile, TileType } from './Tile.js';
 import { SeededRandom } from '../utils/SeededRandom.js';

@@ -1,7 +1,7 @@
 // src/core/GameController.js
-import { GameState, MapConfig, TurnConfig } from './Constants.js';
-import { HexMap } from '../world/HexMap.js';
-import { TileContentType } from '../world/Tile.js';
+import { GameState, MapConfig, TurnConfig, MapPresets } from './Constants.js';
+import { HexMap, createMapByPreset } from '../world/HexMap.js';
+import { TileContentType, makePortal } from '../world/Tile.js';
 import { StateMachine } from './StateMachine.js';
 import { CombatManager } from './CombatManager.js';
 import { Enemy } from '../entities/Enemy.js';
@@ -13,8 +13,20 @@ import { rollRandomItem } from '../data/items.js';
 
 export class GameController {
   constructor(map, player, ui, camera) {
-    this.map = map; this.player = player; this.ui = ui; this.camera = camera; this.selectedHeroes = []; this.combatManager = null; this.turnCount = 0; this.trapCooldown = 0; this.bossMode = false; this.currentMaxTurns = TurnConfig.MAX_TURNS;
-    this.fsm = new StateMachine(GameState.INITIALIZING); this._setupStates();
+    this.map = map;
+    this.noviceVillage = null;
+    this.currentMapName = '新手村';
+    this.player = player;
+    this.ui = ui;
+    this.camera = camera;
+    this.selectedHeroes = [];
+    this.combatManager = null;
+    this.turnCount = 0;
+    this.trapCooldown = 0;
+    this.bossMode = false;
+    this.currentMaxTurns = TurnConfig.MAX_TURNS;
+    this.fsm = new StateMachine(GameState.INITIALIZING);
+    this._setupStates();
   }
 
   hexToPixel(q, r, size) {
@@ -35,12 +47,22 @@ export class GameController {
     });
     this.fsm.addState(GameState.MAP_GENERATION, {
       enter: () => this.ui.showMapGeneration(this.selectedHeroes, () => {
-        this.map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE); this.map.generateEvents();
-        // 玩家出生地向内移动一格
-        const startQ = -MapConfig.RADIUS + 1;
-        const startR = MapConfig.RADIUS - 1;
-        this.player.setGridPos(startQ, startR, this.map);
-        this.map.revealAround(startQ, startR, 5);
+        // 主地图
+        this.map = createMapByPreset('main');
+        this.noviceVillage = createMapByPreset('novice');
+        // 统一从MapPresets获取出生地坐标
+        const mainQ = -MapPresets.main.radius + 1;
+        const mainR = MapPresets.main.radius - 1;
+        const noviceQ = -MapPresets.novice.radius + 1;
+        const noviceR = MapPresets.novice.radius - 1;
+        // 主地图出生地放传送阵
+        this.map.placeContent(mainQ, mainR, makePortal('新手村', noviceQ, noviceR), 0);
+        // 新手村出生地放传送阵
+        this.noviceVillage.placeContent(noviceQ, noviceR, makePortal('主地图', mainQ, mainR), 0);
+        // 玩家出生地在新手村
+        this.currentMapName = '新手村';
+        this.player.setGridPos(noviceQ, noviceR, this.noviceVillage);
+        this.noviceVillage.revealAround(noviceQ, noviceR, 5);
         this.fsm.transition(GameState.MAP_EXPLORATION);
       }),
       exit: () => this.ui.hideMapGeneration(),
@@ -134,12 +156,14 @@ export class GameController {
     if (this.fsm.currentState !== GameState.MAP_EXPLORATION || (q === this.player.q && r === this.player.r)) return;
     const dq = q - this.player.q, dr = r - this.player.r;
     if (!(dq === 0 || dr === 0 || (dq + dr) === 0)) return;
-    const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr)), tile = this.map.getTile(q, r);
+    // 当前地图
+    const curMap = this.currentMapName === '新手村' ? this.noviceVillage : this.map;
+    const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr)), tile = curMap.getTile(q, r);
     if (!tile) return;
     const moveCost = (tile.type.moveCost ?? 1) * dist;
     if (this.player.movementPoints < moveCost) return;
-    this.player.setGridPos(q, r, this.map); this.player.movementPoints -= moveCost; this.ui.updateMovementUI(this.player.movementPoints);
-    this.map.revealAround(q, r, 2); this._handleTileContent(tile); this.ui.updatePartyStatus(this.selectedHeroes);
+    this.player.setGridPos(q, r, curMap); this.player.movementPoints -= moveCost; this.ui.updateMovementUI(this.player.movementPoints);
+    curMap.revealAround(q, r, 2); this._handleTileContent(tile); this.ui.updatePartyStatus(this.selectedHeroes);
   }
 
   _handleTileContent(tile) {
@@ -153,7 +177,37 @@ export class GameController {
       this.ui.showEvent("🔮 Altar", "Pray?", [{ text: "🙏 Pray", onClick: () => { tile.content = null; this._handleAltarPray(); } }, { text: "🚶 Leave", onClick: () => {} }]);
     } else if (c.type === TileContentType.LIGHTHOUSE) {
       this.ui.showEvent("🗼 Lighthouse", "Look into the distance", [{ text: "NE", onClick: () => { tile.content = null; this._revealDirection(1, -1); } }, { text: "SE", onClick: () => { tile.content = null; this._revealDirection(1, 1); } }, { text: "SW", onClick: () => { tile.content = null; this._revealDirection(-1, 1); } }, { text: "NW", onClick: () => { tile.content = null; this._revealDirection(-1, -1); } }]);
+    } else if (c.type === TileContentType.PORTAL) {
+      // 传送阵事件
+      this.ui.showEvent("🌀 传送阵", `是否传送到${c.targetMap}？`, [
+        { text: `传送到${c.targetMap}`, onClick: () => {
+            tile.content = c; // 传送阵不消失
+            this._switchMap(c.targetMap, c.targetQ, c.targetR);
+        }},
+        { text: "取消", onClick: () => {} }
+      ]);
     }
+  }
+  // 切换地图
+  _switchMap(targetMapName, q, r) {
+    if (targetMapName === this.currentMapName) return;
+    let targetMap = null;
+    if (targetMapName === '新手村') targetMap = this.noviceVillage;
+    else targetMap = this.map;
+    if (!targetMap) return;
+    this.currentMapName = targetMapName;
+    this.player.setGridPos(q, r, targetMap);
+    targetMap.revealAround(q, r, 5);
+    // 相机同步
+    if (this.camera) {
+      const bottomLeft = this.hexToPixel(q, r, targetMap.tileSize);
+      this.camera.x = MapConfig.PADDING - bottomLeft.x;
+      this.camera.y = window.innerHeight - MapConfig.PADDING - bottomLeft.y;
+    }
+    // UI刷新
+    this.ui.updatePartyStatus(this.selectedHeroes);
+    // 强制重绘
+    this.fsm.transition(GameState.MAP_EXPLORATION);
   }
 
   _handleTrapEvent() {

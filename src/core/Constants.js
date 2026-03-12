@@ -1,3 +1,19 @@
+// ── 多地图参数预设（统一管理所有地图参数）──
+export const MapPresets = {
+  main: {
+    name: '主地图',
+    radius: 11,
+    tileSize: 40,
+    eventLogic: 'default', // 事件分布逻辑标识，后续可扩展
+  },
+  novice: {
+    name: '新手村',
+    radius: 5, 
+    tileSize: 40,
+    eventLogic: 'default',
+  },
+  // 在这里继续添加更多地图预设
+};
 // src/core/Constants.js
 
 export const GameState = {

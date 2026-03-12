@@ -15,7 +15,12 @@ export const TileContentType = {
   TREASURE: 'treasure',
   ALTAR: 'altar', 
   LIGHTHOUSE: 'lighthouse',
+  PORTAL: 'portal', // 传送阵
 };
+// 传送阵内容生成器
+export function makePortal(targetMap, targetQ, targetR) {
+  return { type: TileContentType.PORTAL, name: '传送阵', targetMap, targetQ, targetR };
+}
 
 export function makeDungeon(name, level = 1, difficulty = 'NORMAL') {
   return { type: TileContentType.DUNGEON, name, level, difficulty };

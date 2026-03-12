@@ -2,7 +2,8 @@
 import { GameController } from './src/core/GameController.js';
 import { GameState, MapConfig } from './src/core/Constants.js';
 import { GameLoop } from './src/core/GameLoop.js';
-import { HexMap } from './src/world/HexMap.js';
+import { HexMap, createMapByPreset } from './src/world/HexMap.js';
+import { makePortal } from './src/world/Tile.js';
 import { Camera } from './src/world/Camera.js';
 import { Player } from './src/entities/Player.js';
 import { DataLoader } from './src/data/DataLoader.js';
@@ -32,7 +33,8 @@ function hexToPixel(q, r, size) {
 
 // ── 启动游戏 ─────────────────────────────────────────────────
 async function init() {
-    // 1. 加载数据（完美保留你的增强型报错提示）
+
+    // 1. 加载数据
     try {
         await DataLoader.loadAll();
     } catch (error) {
@@ -40,6 +42,28 @@ async function init() {
         console.error(error);
         return;
     }
+
+    // 2. 初始化音乐播放器
+    window.BGMPlayer = {
+        current: null,
+        play(src, loop = true) {
+            if (this.current) {
+                this.current.pause();
+                this.current.currentTime = 0;
+            }
+            this.current = new Audio(src);
+            this.current.loop = loop;
+            this.current.volume = 0.5;
+            this.current.play();
+        },
+        stop() {
+            if (this.current) {
+                this.current.pause();
+                this.current.currentTime = 0;
+                this.current = null;
+            }
+        }
+    };
 
     // 2. 显示标题页面，点击 START 后进入游戏
     const titleScreen = new TitleScreen(() => startGame());
@@ -54,6 +78,9 @@ function startGame() {
     const map = new HexMap(MapConfig.RADIUS, MapConfig.TILE_SIZE);
     const camera = new Camera(canvas.width, canvas.height);
     const player = new Player('Leader');
+
+    // 播放地图背景音乐
+    window.BGMPlayer.play('resource/music/map.mp3');
 
     // 初始相机对准左下起始位
     const bottomLeft = hexToPixel(-MapConfig.RADIUS, MapConfig.RADIUS, MapConfig.TILE_SIZE);
@@ -89,6 +116,17 @@ function startGame() {
 
     // 初始化控制器
     const gameController = new GameController(map, player, ui, camera);
+
+    // 监听状态切换，切换音乐
+    const origTransition = gameController.fsm.transition.bind(gameController.fsm);
+    gameController.fsm.transition = function (state, ...args) {
+        if (state === 'COMBAT') {
+            window.BGMPlayer.play('resource/music/fight.mp3');
+        } else if (state === 'MAP_EXPLORATION') {
+            window.BGMPlayer.play('resource/music/map.mp3');
+        }
+        return origTransition(state, ...args);
+    };
 
     // 输入处理
     const inputHandler = new InputHandler(
