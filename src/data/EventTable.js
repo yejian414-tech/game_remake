@@ -40,10 +40,22 @@ export const MERCHANT_LIST = [
   }
   // 后续可继续添加更多商人
 ];
+
+// 集中管理所有遗迹配置
+export const RUIN_LIST = [
+  {
+    map: 'main',
+    q: 6,
+    r: 1,
+    name: '古代遗迹入口',
+    enemyName: '腐化守卫'
+  }
+  // 后续可继续添加更多遗迹
+];
 // src/data/EventTable.js
 // 事件表管理 - 集中所有事件定义和生成概率
 
-import { TileContentType, makeDungeon, makeBoss, makeTreasure, makeAltar, makeLighthouse, makeNPC, makeVillage, makeMerchant } from '../world/Tile.js';
+import { TileContentType, makeDungeon, makeBoss, makeTreasure, makeAltar, makeLighthouse, makeNPC, makeVillage, makeMerchant, makeRuin } from '../world/Tile.js';
 import { GameState } from '../core/Constants.js';
 import { rollSpeed } from '../core/Dice.js';
 import { rollRandomItem } from './items.js';
@@ -160,6 +172,40 @@ export class EventTable {
 
       // 开始第一步对话
       step1();
+    }
+
+    /**
+     * 处理遗迹事件 - 古代遗迹入口
+     * @param {Object} gameController - 游戏控制器
+     * @param {Object} tile - 地块
+     * @param {Object} content - 内容对象
+     */
+    static handleRuin(gameController, tile, content) {
+      const ruinName = content.name || '古代遗迹入口';
+      const enemyName = content.enemyName || '腐化守卫';
+
+      gameController.ui.showEvent(
+        `📍 ${ruinName}`,
+        '巨大的石门矗立在森林中。\n\n门上刻着古老符文。\n\n突然，一个腐化的身影从阴影中走出来......',
+        [
+          {
+            text: '⚔️ 战斗',
+            onClick: () => {
+              tile.content = null;
+              // 创建一个小Boss敌人
+              const bossContent = makeBoss(enemyName, 3, 'HARD');
+              gameController.fsm.transition(GameState.COMBAT, bossContent);
+            }
+          },
+          {
+            text: '🏃 退避',
+            onClick: () => {
+              gameController.player.movementPoints = 0;
+              gameController.ui.updateMovementUI(0);
+            }
+          }
+        ]
+      );
     }
   // 事件类型定义
   static EVENTS = {
