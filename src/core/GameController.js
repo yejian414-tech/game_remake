@@ -1,8 +1,8 @@
 // src/core/GameController.js
 import { GameState, MapConfig, TurnConfig, MapPresets } from './Constants.js';
 import { HexMap, createMapByPreset } from '../world/HexMap.js';
-import { TileContentType, makePortal, makeBoss, TileType, makeNPC, makeVillage, makeMerchant, makeRuin } from '../world/Tile.js';
-import { NPC_LIST, VILLAGE_LIST, MERCHANT_LIST, RUIN_LIST } from '../data/EventTable.js';
+import { TileContentType, makePortal, makeBoss, TileType, makeNPC, makeVillage, makeMerchant, makeRuin, makeCorruptedDeer } from '../world/Tile.js';
+import { NPC_LIST, VILLAGE_LIST, MERCHANT_LIST, RUIN_LIST, CORRUPTED_DEER_LIST } from '../data/EventTable.js';
 import { StateMachine } from './StateMachine.js';
 import { CombatManager } from './CombatManager.js';
 import { Enemy } from '../entities/Enemy.js';
@@ -29,6 +29,7 @@ export class GameController {
     this.bossMode = false;
     this.currentMaxTurns = TurnConfig.MAX_TURNS;
     this.currentMissionName = null;
+    this.merchantEncountered = false;
     this.gameStory = new GameStory(ui);
     this.fsm = new StateMachine(GameState.INITIALIZING);
     this._setupStates();
@@ -99,6 +100,15 @@ export class GameController {
           targetMap.placeContent(
             ruin.q, ruin.r,
             makeRuin(ruin.name, ruin.enemyName),
+            0
+          );
+        }
+        // 批量放置所有被腐化的鹿
+        for (const deer of CORRUPTED_DEER_LIST) {
+          const targetMap = deer.map === 'main' ? this.map : this.noviceVillage;
+          targetMap.placeContent(
+            deer.q, deer.r,
+            makeCorruptedDeer(deer.name),
             0
           );
         }
@@ -242,6 +252,8 @@ export class GameController {
       EventTable.handleMerchant(this, tile, c);
     } else if (c.type === 'ruin') {
       EventTable.handleRuin(this, tile, c);
+    } else if (c.type === 'corruptedDeer') {
+      EventTable.handleCorruptedDeer(this, tile, c);
     } else if (c.type === TileContentType.NPC) {
       EventTable.handleNPC(this, tile, c);
     }

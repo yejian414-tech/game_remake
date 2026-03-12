@@ -37,6 +37,12 @@ export const MERCHANT_LIST = [
     q: -2,
     r: -5,
     name: '旅商'
+  },
+  {
+    map: 'main',
+    q: 4,
+    r: 0,
+    name: '游商'
   }
   // 后续可继续添加更多商人
 ];
@@ -52,10 +58,27 @@ export const RUIN_LIST = [
   }
   // 后续可继续添加更多遗迹
 ];
+
+// 集中管理所有被腐化的鹿配置
+export const CORRUPTED_DEER_LIST = [
+  {
+    map: 'main',
+    q: 7,
+    r: -7,
+    name: '被腐化的鹿'
+  },
+  {
+    map: 'main',
+    q: -5,
+    r: -2,
+    name: '被腐化的鹿'
+  }
+  // 后续可继续添加更多被腐化的鹿
+];
 // src/data/EventTable.js
 // 事件表管理 - 集中所有事件定义和生成概率
 
-import { TileContentType, makeDungeon, makeBoss, makeTreasure, makeAltar, makeLighthouse, makeNPC, makeVillage, makeMerchant, makeRuin } from '../world/Tile.js';
+import { TileContentType, makeDungeon, makeBoss, makeTreasure, makeAltar, makeLighthouse, makeNPC, makeVillage, makeMerchant, makeRuin, makeCorruptedDeer } from '../world/Tile.js';
 import { GameState } from '../core/Constants.js';
 import { rollSpeed } from '../core/Dice.js';
 import { rollRandomItem } from './items.js';
@@ -125,7 +148,33 @@ export class EventTable {
     static handleMerchant(gameController, tile, content) {
       const merchant = content.name || '旅商';
       
-      // 第一步对话
+      // 检查是否已经遇到过商人
+      if (gameController.merchantEncountered) {
+        // 再次遇到商人的对话 - 交易模式
+        gameController.ui.showEvent(
+          `👤 ${merchant}`,
+          '"还没找到宝藏吗？"\n\n"如果你活着回来，我愿意用高价收购任何古代遗物。"',
+          [
+            {
+              text: '贸易',
+              onClick: () => {
+                gameController.ui.showEvent(
+                  `👤 ${merchant}`,
+                  '（此处可实现交易界面）',
+                  [{ text: '离开', onClick: () => { } }]
+                );
+              }
+            },
+            {
+              text: '离开',
+              onClick: () => { }
+            }
+          ]
+        );
+        return;
+      }
+      
+      // 第一次遇到商人的对话 - 救援故事
       const step1 = () => {
         gameController.ui.showEvent(
           `👤 ${merchant}`,
@@ -163,6 +212,7 @@ export class EventTable {
 
       // 第五步 - 结束
       const step5 = () => {
+        gameController.merchantEncountered = true;
         gameController.ui.showEvent(
           `👤 ${merchant}`,
           '"拿着这些吧，算是感谢。"\n\n（商人递给你一个袋子）\n\n📢 提示：下次遇到商人可以进行交易。',
@@ -202,6 +252,43 @@ export class EventTable {
             onClick: () => {
               gameController.player.movementPoints = 0;
               gameController.ui.updateMovementUI(0);
+            }
+          }
+        ]
+      );
+    }
+
+    /**
+     * 处理被腐化的鹿事件
+     * @param {Object} gameController - 游戏控制器
+     * @param {Object} tile - 地块
+     * @param {Object} content - 内容对象
+     */
+    static handleCorruptedDeer(gameController, tile, content) {
+      const deerName = content.name || '被腐化的鹿';
+
+      gameController.ui.showEvent(
+        `📍 森林`,
+        '一只巨大的鹿站在森林中。\n\n它的身体被黑色藤蔓缠绕。\n\n它看起来很痛苦，眼神中闪烁着理性的光芒......',
+        [
+          {
+            text: '⚔️ 攻击',
+            onClick: () => {
+              tile.content = null;
+              // 创建一个普通敌人"腐化鹿"
+              const combatContent = makeBoss(deerName, 2, 'NORMAL');
+              combatContent.isRareReward = true; // 标记为稀有奖励
+              gameController.fsm.transition(GameState.COMBAT, combatContent);
+            }
+          },
+          {
+            text: '🚶 放过它',
+            onClick: () => {
+              gameController.ui.showEvent(
+                `📍 森林`,
+                '你放低了武器。\n\n鹿似乎明白了你的意思，转身逃入了森林深处。\n\n本次事件结束。',
+                [{ text: '继续', onClick: () => { } }]
+              );
             }
           }
         ]
