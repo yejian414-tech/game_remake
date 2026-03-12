@@ -7,6 +7,15 @@ export function makeVillage(name = '村庄') {
     iconType: 'greenCircle',
   };
 }
+
+// 商人内容生成器
+export function makeMerchant(name = '旅商') {
+  return {
+    type: 'merchant',
+    name,
+    iconType: 'blueCircle',
+  };
+}
 // src/world/Tile.js
 import { DataLoader } from '../data/DataLoader.js';
 
@@ -145,11 +154,14 @@ export class Tile {
   if (this.content && visState === 'visible') {
     // 检查是否有自定义iconType（用于圆圈图标）
     const iconType = this.content.iconType;
-    if (iconType === 'redCircle' || iconType === 'greenCircle') {
+    if (iconType === 'redCircle' || iconType === 'greenCircle' || iconType === 'blueCircle') {
       ctx.save();
       ctx.beginPath();
       ctx.arc(x, y, size * 0.55, 0, Math.PI * 2);
-      ctx.fillStyle = iconType === 'redCircle' ? 'red' : 'green';
+      let color = 'red';
+      if (iconType === 'greenCircle') color = 'green';
+      else if (iconType === 'blueCircle') color = 'blue';
+      ctx.fillStyle = color;
       ctx.globalAlpha = 0.85;
       ctx.shadowColor = '#fff';
       ctx.shadowBlur = 8;

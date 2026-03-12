@@ -29,10 +29,21 @@ export const VILLAGE_LIST = [
   }
   // 后续可继续添加更多村庄
 ];
+
+// 集中管理所有商人配置
+export const MERCHANT_LIST = [
+  {
+    map: 'main',
+    q: -2,
+    r: -5,
+    name: '旅商'
+  }
+  // 后续可继续添加更多商人
+];
 // src/data/EventTable.js
 // 事件表管理 - 集中所有事件定义和生成概率
 
-import { TileContentType, makeDungeon, makeBoss, makeTreasure, makeAltar, makeLighthouse, makeNPC, makeVillage } from '../world/Tile.js';
+import { TileContentType, makeDungeon, makeBoss, makeTreasure, makeAltar, makeLighthouse, makeNPC, makeVillage, makeMerchant } from '../world/Tile.js';
 import { GameState } from '../core/Constants.js';
 import { rollSpeed } from '../core/Dice.js';
 import { rollRandomItem } from './items.js';
@@ -91,6 +102,64 @@ export class EventTable {
           }
         ]
       );
+    }
+
+    /**
+     * 处理商人事件 - 多步骤对话
+     * @param {Object} gameController - 游戏控制器
+     * @param {Object} tile - 地块
+     * @param {Object} content - 内容对象
+     */
+    static handleMerchant(gameController, tile, content) {
+      const merchant = content.name || '旅商';
+      
+      // 第一步对话
+      const step1 = () => {
+        gameController.ui.showEvent(
+          `👤 ${merchant}`,
+          '"哦！感谢诸神！你就是那个救了我的护卫的人吗？"\n\n"这片森林已经疯了……树在腐烂，动物也变成了怪物。"\n\n"如果不是你，我们的货物早就被那些怪物抢光了。"',
+          [{ text: '继续', onClick: step2 }]
+        );
+      };
+
+      // 第二步对话
+      const step2 = () => {
+        gameController.ui.showEvent(
+          `👤 ${merchant}`,
+          '"几天前还不是这样。"\n\n"但突然之间，森林深处开始出现黑色的雾。"\n\n"所有靠近 古代遗迹 的生物都被腐化了。"',
+          [{ text: '继续', onClick: step3 }]
+        );
+      };
+
+      // 第三步对话
+      const step3 = () => {
+        gameController.ui.showEvent(
+          `👤 ${merchant}`,
+          '"不过……有一件事你可能会感兴趣。"\n\n"在遗迹深处，据说埋着一件 古老的宝藏。"\n\n"很多冒险者都是为了它来的。"\n\n"但很少有人活着回来。"',
+          [{ text: '继续', onClick: step4 }]
+        );
+      };
+
+      // 第四步对话
+      const step4 = () => {
+        gameController.ui.showEvent(
+          `👤 ${merchant}`,
+          '"如果你真的想找那宝藏。"\n\n"它大概在东边。"\n\n"你会看到一座 被藤蔓包围的遗迹入口。"\n\n"那就是一切麻烦的来源。"',
+          [{ text: '继续', onClick: step5 }]
+        );
+      };
+
+      // 第五步 - 结束
+      const step5 = () => {
+        gameController.ui.showEvent(
+          `👤 ${merchant}`,
+          '"拿着这些吧，算是感谢。"\n\n（商人递给你一个袋子）\n\n📢 提示：下次遇到商人可以进行交易。',
+          [{ text: '离开', onClick: () => { gameController._startMission('🎯 寻找遗迹', 10); } }]
+        );
+      };
+
+      // 开始第一步对话
+      step1();
     }
   // 事件类型定义
   static EVENTS = {
