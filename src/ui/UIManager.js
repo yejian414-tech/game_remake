@@ -205,16 +205,17 @@ export class UIManager {
     card.querySelectorAll(".loot-equip").forEach(btn => btn.addEventListener("click", () => { onPick?.({ heroIndex: Number(btn.dataset.i), action: "equip" }); overlay.remove(); }));
   }
 
-  showStory(onNext) {
-    this.els.storyText.textContent = "在遥远的森林中，一棵古老的黑暗古树正在侵蚀这片土地。勇士们，你们需要在20回合内探索这片大地，然后前往地图右下角的黑暗古树，击败它以获得翡翠钥匙，拯救这片土地。";
+  showStoryScreen(title, text, onNext) {
+    this.els.storyTitle.textContent = title;
+    this.els.storyText.textContent = text;
     this.els.storyScreen.style.display = 'flex';
     this.els.storyNextBtn.onclick = () => {
-      this.hideStory();
+      this.els.storyScreen.style.display = 'none';
       onNext?.();
     };
   }
 
-  hideStory() {
+  hideStoryScreen() {
     this.els.storyScreen.style.display = 'none';
   }
   showChestReward(item, onClose) { ChestAnimation.play(item, onClose ?? (() => {})); }

@@ -1,5 +1,7 @@
 // 新手村地图工厂
 import { MapConfig, MapPresets } from '../core/Constants.js';
+import { EventTable } from '../data/EventTable.js';
+import { SeededRandom } from '../utils/SeededRandom.js';
 export function createMapByPreset(presetName) {
   const preset = MapPresets[presetName];
   if (!preset) throw new Error('地图预设未找到: ' + presetName);
@@ -10,8 +12,6 @@ export function createMapByPreset(presetName) {
 }
 // src/world/HexMap.js
 import { Tile, TileType } from './Tile.js';
-import { SeededRandom } from '../utils/SeededRandom.js';
-import { makeDungeon, makeTreasure, makeAltar, makeLighthouse } from './Tile.js';
 
 export class HexMap {
   constructor(radius, tileSize = 30, seed = SeededRandom.randomSeed()) {
@@ -145,10 +145,10 @@ export class HexMap {
 
     // 保证每种事件生成一次
     const eventTypes = [
-      () => makeAltar(1),
-      () => makeDungeon("Dungeon", 1),
-      () => makeTreasure(1), // 普通宝藏作为代表
-      () => makeLighthouse(1)
+      'ALTAR',
+      'DUNGEON',
+      'TREASURE_COMMON',
+      'LIGHTHOUSE'
     ];
 
     const generatedTypes = new Set();
@@ -157,8 +157,9 @@ export class HexMap {
     const shuffled = internalTiles.slice().sort(() => this.rng.next() - 0.5);
     for (let i = 0; i < Math.min(4, shuffled.length); i++) {
       if (!shuffled[i].content) {
-        shuffled[i].content = eventTypes[i]();
-        generatedTypes.add(eventTypes[i]().type);
+        const content = EventTable.createContentByType(eventTypes[i]);
+        shuffled[i].content = content;
+        generatedTypes.add(EventTable.getContentDedupeKey(content));
       }
     }
 
@@ -173,51 +174,21 @@ export class HexMap {
       const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
       const roll = this.rng.next();
 
-      if (dist > 4) {
-        // 屏障外部，使用原来概率，无 has 检查
-        if (roll > 0.975) {
-          tile.content = makeAltar(1);
-        }
-        else if (roll > 0.95) {
-          tile.content = makeDungeon("Dungeon", 1);
-        } 
-        else if (roll > 0.91) {
-          tile.content = makeTreasure(3); // 史诗（最稀有）
-        }
-        else if (roll > 0.90) {
-          tile.content = makeTreasure(2); // 稀有
-        }
-        else if (roll > 0.88) {
-          tile.content = makeTreasure(1); // 普通
-        }else if (roll > 0.85) {
-          tile.content = makeLighthouse(1);
-        }
-      } else {
-        // 屏障内部，使用 has 检查，确保最多一次
-        if (roll > 0.975 && !generatedTypes.has('altar')) {
-          tile.content = makeAltar(1);
-          generatedTypes.add('altar');
-        }
-        else if (roll > 0.95 && !generatedTypes.has('dungeon')) {
-          tile.content = makeDungeon("Dungeon", 1);
-          generatedTypes.add('dungeon');
-        } 
-        else if (roll > 0.91 && !generatedTypes.has('treasure')) {
-          tile.content = makeTreasure(3);
-          generatedTypes.add('treasure');
-        }
-        else if (roll > 0.90 && !generatedTypes.has('treasure')) {
-          tile.content = makeTreasure(2);
-          generatedTypes.add('treasure');
-        }
-        else if (roll > 0.88 && !generatedTypes.has('treasure')) {
-          tile.content = makeTreasure(1);
-          generatedTypes.add('treasure');
-        }
-        else if (roll > 0.85 && !generatedTypes.has('lighthouse')) {
-          tile.content = makeLighthouse(1);
-          generatedTypes.add('lighthouse');
-        }
+      const location = dist > 4 ? 'OUTSIDE_BARRIER' : 'INSIDE_BARRIER';
+      const eventType = EventTable.getEventTypeByRoll(roll, location);
+
+      if (!eventType) return;
+
+      // 屏障内部需要检查是否已生成过该类型
+      if (location === 'INSIDE_BARRIER') {
+        const dedupeKey = EventTable.getContentDedupeKey(EventTable.createContentByType(eventType));
+        if (generatedTypes.has(dedupeKey)) return;
+        generatedTypes.add(dedupeKey);
+      }
+
+      const content = EventTable.createContentByType(eventType);
+      if (content) {
+        tile.content = content;
       }
     });
   }

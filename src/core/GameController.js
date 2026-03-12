@@ -1,7 +1,7 @@
 // src/core/GameController.js
 import { GameState, MapConfig, TurnConfig, MapPresets } from './Constants.js';
 import { HexMap, createMapByPreset } from '../world/HexMap.js';
-import { TileContentType, makePortal } from '../world/Tile.js';
+import { TileContentType, makePortal, makeBoss, TileType } from '../world/Tile.js';
 import { StateMachine } from './StateMachine.js';
 import { CombatManager } from './CombatManager.js';
 import { Enemy } from '../entities/Enemy.js';
@@ -10,6 +10,8 @@ import { DataLoader } from '../data/DataLoader.js';
 import { rollSpeed } from './Dice.js';
 import { Renderer } from '../rendering/Renderer.js';
 import { rollRandomItem } from '../data/items.js';
+import { GameStory } from './GameStory.js';
+import { EventTable } from '../data/EventTable.js';
 
 export class GameController {
   constructor(map, player, ui, camera) {
@@ -25,6 +27,7 @@ export class GameController {
     this.trapCooldown = 0;
     this.bossMode = false;
     this.currentMaxTurns = TurnConfig.MAX_TURNS;
+    this.gameStory = new GameStory(ui);
     this.fsm = new StateMachine(GameState.INITIALIZING);
     this._setupStates();
   }
@@ -42,8 +45,8 @@ export class GameController {
       exit: () => this.ui.hideCharacterSelect(),
     });
     this.fsm.addState(GameState.STORY, {
-      enter: () => this.ui.showStory(() => this.fsm.transition(GameState.MAP_GENERATION)),
-      exit: () => this.ui.hideStory(),
+      enter: () => this.gameStory.showStory('INTRO', () => this.fsm.transition(GameState.MAP_GENERATION)),
+      exit: () => this.gameStory.hideStory(),
     });
     this.fsm.addState(GameState.MAP_GENERATION, {
       enter: () => this.ui.showMapGeneration(this.selectedHeroes, () => {
@@ -167,25 +170,25 @@ export class GameController {
   }
 
   _handleTileContent(tile) {
-    if (!tile.content) { if (this.trapCooldown === 0 && Math.random() <= 0.15) { this.trapCooldown = 2; this._handleTrapEvent(); } return; }
+    if (!tile.content) {
+      // 随机陷阱事件
+      if (this.trapCooldown === 0 && Math.random() <= EventTable.getTrapSpawnChance()) {
+        this.trapCooldown = 2;
+        EventTable.handleTrap(this);
+      }
+      return;
+    }
     const c = tile.content;
     if (c.type === TileContentType.DUNGEON || c.type === TileContentType.BOSS) {
-        this.ui.showEvent(c.type === TileContentType.BOSS ? "⚠️ Boss" : "⚔️ Enemy", `Found ${c.name}, engage?`, [{ text: "⚔️ Fight", onClick: () => { tile.content = null; this.fsm.transition(GameState.COMBAT, c); } }, { text: "🏃 Retreat", onClick: () => { this.player.movementPoints = 0; this.ui.updateMovementUI(0); } }]);
+      EventTable.handleCombat(this, tile, c);
     } else if (c.type === TileContentType.TREASURE) {
-      this.ui.showEvent("🎁 Treasure",`Found ${c.name}, open it?`, [{ text: "🎁 Open", onClick: () => { tile.content = null; let loot = rollRandomItem(); if (c.lootTier === 3) while(loot.rarity !== 'epic') loot = rollRandomItem(); else if (c.lootTier === 2) while(loot.rarity === 'common') loot = rollRandomItem(); this.ui.showChestReward(loot, () => { this.ui.showLootAssign(loot, this.selectedHeroes, ({ heroIndex, action }) => { const hero = this.selectedHeroes?.[heroIndex]; if (hero) { if (action === "put") hero.inventory.push(loot); else hero.equip?.(loot, loot.slot ?? 0); this.ui.updatePartyStatus(this.selectedHeroes); } }); }); } }]);
+      EventTable.handleTreasure(this, tile, c);
     } else if (c.type === TileContentType.ALTAR) {
-      this.ui.showEvent("🔮 Altar", "Pray?", [{ text: "🙏 Pray", onClick: () => { tile.content = null; this._handleAltarPray(); } }, { text: "🚶 Leave", onClick: () => {} }]);
+      EventTable.handleAltar(this, tile);
     } else if (c.type === TileContentType.LIGHTHOUSE) {
-      this.ui.showEvent("🗼 Lighthouse", "Look into the distance", [{ text: "NE", onClick: () => { tile.content = null; this._revealDirection(1, -1); } }, { text: "SE", onClick: () => { tile.content = null; this._revealDirection(1, 1); } }, { text: "SW", onClick: () => { tile.content = null; this._revealDirection(-1, 1); } }, { text: "NW", onClick: () => { tile.content = null; this._revealDirection(-1, -1); } }]);
+      EventTable.handleLighthouse(this, tile);
     } else if (c.type === TileContentType.PORTAL) {
-      // 传送阵事件
-      this.ui.showEvent("🌀 传送阵", `是否传送到${c.targetMap}？`, [
-        { text: `传送到${c.targetMap}`, onClick: () => {
-            tile.content = c; // 传送阵不消失
-            this._switchMap(c.targetMap, c.targetQ, c.targetR);
-        }},
-        { text: "取消", onClick: () => {} }
-      ]);
+      EventTable.handlePortal(this, tile, c);
     }
   }
   // 切换地图
@@ -210,19 +213,9 @@ export class GameController {
     this.fsm.transition(GameState.MAP_EXPLORATION);
   }
 
-  _handleTrapEvent() {
-    this.ui.showEvent("🪤 Trap", "You triggered a trap! Ready to roll...", [{ text: "🎲 Roll", onClick: () => {
-          const val = Math.max(1, Math.min(6, Math.round(rollSpeed(this.selectedHeroes[0], 0.5, 20).sampleRoll / 20 * 6)));
-          this.ui.showEvent("🎲 Roll Result", `You rolled a ${val}!`, [{ text: "Continue", onClick: () => {
-                  if (val <= 3) { const hero = this.selectedHeroes[0], dmg = Math.floor(hero.maxHp * 0.15); hero.hp = Math.max(0, hero.hp - dmg); this.ui.updatePartyStatus(this.selectedHeroes); this.ui.showEvent("💥 Trap Sprung", `Took ${dmg} damage!`, [{ text: "OK" }]); }
-                  else this.ui.showEvent("✨ Evaded", "You dodged the trap!", [{ text: "OK" }]);
-                } }]);
-        } }]);
-  }
-
-  _handleAltarPray() {
-    const hero = this.selectedHeroes[0], heal = Math.floor(hero.maxHp * 0.4); hero.hp = Math.min(hero.maxHp, hero.hp + heal);
-    this.ui.updatePartyStatus(this.selectedHeroes); this.ui.showEvent("✨ Divine Light", `Healed ${heal} HP`, [{ text: "Continue", onClick: () => {} }]);
+  _executeTrapRoll() {
+    const val = Math.max(1, Math.min(6, Math.round(rollSpeed(this.selectedHeroes[0], 0.5, 20).sampleRoll / 20 * 6)));
+    EventTable.handleTrapResult(this, val);
   }
 
   _revealDirection(dirQ, dirR) {
