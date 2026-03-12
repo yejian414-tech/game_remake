@@ -76,6 +76,18 @@ export class Tile {
       return;
     }
 
+    ctx.save();
+    hexPath();
+    ctx.fillStyle = '#4a7c2c'; // 匹配草地的深色基调
+    ctx.fill();
+    ctx.strokeStyle = '#4a7c2c';
+    ctx.lineWidth = 1; 
+    ctx.stroke();
+    ctx.restore();
+
+
+    const imgW = size * 2;
+    const imgH = size * Math.sqrt(3);
     // 2. 绘制地形图片 (完全取代原来的色块填充)
     let terrainKey = '';
     if (this.type.id === 0) terrainKey = `grass_${this.variant}`; // 草地
@@ -87,21 +99,36 @@ export class Tile {
 
     const terrainImg = DataLoader.getImage(terrainKey);
     if (terrainImg) {
-      // 绘图区域稍微放大以无缝拼接
-      ctx.drawImage(terrainImg, x - size, y - size, size * 2, size * 2);
-    } else {
-      // 如果没有贴图资源，用颜色填充
-      hexPath();
-      ctx.fillStyle = this.type.color;
-      ctx.fill();
-    }
+    // 计算平顶六边形的正确比例
+    const bleed = 0.5; 
+    ctx.drawImage(
+      terrainImg, 
+      x - size - bleed / 2,      // 水平起点微调
+      y - imgH / 2 - bleed / 2,  // 垂直起点微调
+      imgW + bleed,              // 宽度微增
+      imgH + bleed            // 高度
+    );
+  }
 
-    // 3. 绘制内容图片 (Dungeon, Boss, Treasure 等图标)
-    if (this.content && visState === 'visible') {
-      const contentImg = DataLoader.getImage(this.content.type);
-      if (contentImg) {
-        const imgSize = size * 1.5;
-        ctx.drawImage(contentImg, x - imgSize/2, y - imgSize/2, imgSize, imgSize);
+  // 绘制内容图片 (Dungeon, Boss 等图标)
+  if (this.content && visState === 'visible') {
+    const contentImg = DataLoader.getImage(this.content.type);
+    if (contentImg) {
+    // 设置缩放比例，例如 0.85 表示图标大小为格子的 85%，留下 15% 的边框缝隙
+      const scale = 0.92; 
+    
+    // 计算缩放后的宽度和高度
+      const imgW = (size * 2) * scale;
+      const imgH = (size * Math.sqrt(3)) * scale; 
+
+    // 使用缩放后的宽高，并重新计算起始坐标 (x - 宽/2, y - 高/2) 以确保图标依然在格子中心
+      ctx.drawImage(
+        contentImg,
+        x - imgW / 2, // 水平居中偏移
+        y - imgH / 2, // 垂直居中偏移
+        imgW, 
+        imgH
+      );
       }
     }
 

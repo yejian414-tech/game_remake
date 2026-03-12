@@ -18,8 +18,9 @@ export class DataLoader {
     this.heroMap = new Map(heroData.heroes.map(h => [h.id, h]));
     this.skillMap = new Map(skillData.skills.map(s => [s.id, s]));
 
-    // 2. 预加载图片资源
+    // 2. 预加载图片资源（增加了 hero 路径）
     const imagePaths = {
+      'hero': './resource/img/normal/hero.png', // 玩家头像图片
       'altar': './resource/img/map/chapter1/altar.png',
       'boss': './resource/img/map/chapter1/boss.png',
       'dungeon': './resource/img/map/chapter1/dungeon.png',
