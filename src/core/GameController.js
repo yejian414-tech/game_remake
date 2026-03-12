@@ -72,47 +72,67 @@ export class GameController {
         // 批量放置所有NPC
         for (const npc of NPC_LIST) {
           const targetMap = npc.map === 'main' ? this.map : this.noviceVillage;
-          targetMap.placeContent(
-            npc.q, npc.r,
-            makeNPC(npc.name, npc.dialogue, npc.options || {}),
-            0
-          );
+          const tile = targetMap.getTile(npc.q, npc.r);
+          // 只在草地上放置事件
+          if (tile && tile.type === TileType.GRASS) {
+            targetMap.placeContent(
+              npc.q, npc.r,
+              makeNPC(npc.name, npc.dialogue, npc.options || {}),
+              0
+            );
+          }
         }
         // 批量放置所有村庄
         for (const village of VILLAGE_LIST) {
           const targetMap = village.map === 'main' ? this.map : this.noviceVillage;
-          targetMap.placeContent(
-            village.q, village.r,
-            makeVillage(village.name),
-            0
-          );
+          const tile = targetMap.getTile(village.q, village.r);
+          // 只在草地上放置事件
+          if (tile && tile.type === TileType.GRASS) {
+            targetMap.placeContent(
+              village.q, village.r,
+              makeVillage(village.name),
+              0
+            );
+          }
         }
         // 批量放置所有商人
         for (const merchant of MERCHANT_LIST) {
           const targetMap = merchant.map === 'main' ? this.map : this.noviceVillage;
-          targetMap.placeContent(
-            merchant.q, merchant.r,
-            makeMerchant(merchant.name),
-            0
-          );
+          const tile = targetMap.getTile(merchant.q, merchant.r);
+          // 只在草地上放置事件
+          if (tile && tile.type === TileType.GRASS) {
+            targetMap.placeContent(
+              merchant.q, merchant.r,
+              makeMerchant(merchant.name),
+              0
+            );
+          }
         }
         // 批量放置所有遗迹
         for (const ruin of RUIN_LIST) {
           const targetMap = ruin.map === 'main' ? this.map : this.noviceVillage;
-          targetMap.placeContent(
-            ruin.q, ruin.r,
-            makeRuin(ruin.name, ruin.enemyName),
-            0
-          );
+          const tile = targetMap.getTile(ruin.q, ruin.r);
+          // 只在草地上放置事件
+          if (tile && tile.type === TileType.GRASS) {
+            targetMap.placeContent(
+              ruin.q, ruin.r,
+              makeRuin(ruin.name, ruin.enemyName),
+              0
+            );
+          }
         }
         // 批量放置所有被腐化的鹿
         for (const deer of CORRUPTED_DEER_LIST) {
           const targetMap = deer.map === 'main' ? this.map : this.noviceVillage;
-          targetMap.placeContent(
-            deer.q, deer.r,
-            makeCorruptedDeer(deer.name),
-            0
-          );
+          const tile = targetMap.getTile(deer.q, deer.r);
+          // 只在草地上放置事件
+          if (tile && tile.type === TileType.GRASS) {
+            targetMap.placeContent(
+              deer.q, deer.r,
+              makeCorruptedDeer(deer.name),
+              0
+            );
+          }
         }
         // 玩家出生地在新手村
         this.currentMapName = '新手村';

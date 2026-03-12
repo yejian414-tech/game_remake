@@ -40,8 +40,8 @@ import { DataLoader } from '../data/DataLoader.js';
 
 export const TileType = {
   GRASS: { id: 0, color: '#7cfc00', name: 'Plains', moveCost: 1 },
-  FOREST: { id: 1, color: '#228b22', name: 'Forest', moveCost: 1 },
-  MOUNTAIN: { id: 2, color: '#8b4513', name: 'Mountains', moveCost: 2 },
+  FOREST: { id: 1, color: '#228b22', name: 'Forest', moveCost: Infinity },
+  MOUNTAIN: { id: 2, color: '#8b4513', name: 'Mountains', moveCost: Infinity },
   BARRIER: { id: 3, color: '#808080', name: 'Barrier', moveCost: Infinity },
   BOUNDARY: { id: 4, color: '#8b4513', name: 'Boundary', moveCost: Infinity },
 };
