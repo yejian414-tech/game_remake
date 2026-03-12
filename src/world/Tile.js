@@ -1,3 +1,12 @@
+// 村庄内容生成器
+export function makeVillage(name = '村庄') {
+  return {
+    type: 'village',
+    name,
+    dialogue: '欢迎来到村庄。',
+    iconType: 'greenCircle',
+  };
+}
 // src/world/Tile.js
 import { DataLoader } from '../data/DataLoader.js';
 
@@ -134,10 +143,27 @@ export class Tile {
 
   // 绘制内容图片 (Dungeon, Boss, NPC等图标)
   if (this.content && visState === 'visible') {
-    if (this.content.type === TileContentType.NPC) {
+    // 检查是否有自定义iconType（用于圆圈图标）
+    const iconType = this.content.iconType;
+    if (iconType === 'redCircle' || iconType === 'greenCircle') {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, size * 0.55, 0, Math.PI * 2);
+      ctx.fillStyle = iconType === 'redCircle' ? 'red' : 'green';
+      ctx.globalAlpha = 0.85;
+      ctx.shadowColor = '#fff';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
+      ctx.restore();
+    } else if (this.content.type === TileContentType.NPC) {
       // 根据iconType渲染不同NPC图标，默认红圈
-      const iconType = this.content.iconType || 'redCircle';
-      if (iconType === 'redCircle') {
+      const defaultIconType = this.content.iconType || 'redCircle';
+      if (defaultIconType === 'redCircle') {
         ctx.save();
         ctx.beginPath();
         ctx.arc(x, y, size * 0.55, 0, Math.PI * 2);

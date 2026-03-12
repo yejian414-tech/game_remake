@@ -1,3 +1,11 @@
+
+/**
+ * 处理村庄事件
+ * @param {Object} gameController - 游戏控制器
+ * @param {Object} tile - 地块
+ * @param {Object} content - 内容对象
+ */
+// ...existing code...
 // 集中管理所有NPC配置
 export const NPC_LIST = [
   {
@@ -10,15 +18,62 @@ export const NPC_LIST = [
   }
   // 后续可继续添加更多NPC
 ];
+
+// 集中管理所有村庄配置
+export const VILLAGE_LIST = [
+  {
+    map: 'main',
+    q: -6,
+    r: 2,
+    name: '村庄'
+  }
+  // 后续可继续添加更多村庄
+];
 // src/data/EventTable.js
 // 事件表管理 - 集中所有事件定义和生成概率
 
-import { TileContentType, makeDungeon, makeBoss, makeTreasure, makeAltar, makeLighthouse, makeNPC } from '../world/Tile.js';
+import { TileContentType, makeDungeon, makeBoss, makeTreasure, makeAltar, makeLighthouse, makeNPC, makeVillage } from '../world/Tile.js';
 import { GameState } from '../core/Constants.js';
 import { rollSpeed } from '../core/Dice.js';
 import { rollRandomItem } from './items.js';
 
 export class EventTable {
+    /**
+     * 处理村庄事件
+     * @param {Object} gameController - 游戏控制器
+     * @param {Object} tile - 地块
+     * @param {Object} content - 内容对象
+     */
+    static handleVillage(gameController, tile, content) {
+      gameController.ui.showEvent(
+        '🏘️ 村庄',
+        '欢迎来到村庄。',
+        [
+          {
+            text: '贸易',
+            onClick: () => { gameController.ui.showEvent('贸易', '（此处可实现交易界面）', [{ text: '返回', onClick: () => EventTable.handleVillage(gameController, tile, content) }]); }
+          },
+          {
+            text: '任务',
+            onClick: () => { gameController.ui.showEvent('任务', '（此处可实现任务列表）', [{ text: '返回', onClick: () => EventTable.handleVillage(gameController, tile, content) }]); }
+          },
+          {
+            text: '休息',
+            onClick: () => {
+              const hero = gameController.selectedHeroes[0] || gameController.player;
+              const heal = Math.floor(hero.maxHp * 0.2);
+              hero.hp = Math.min(hero.maxHp, hero.hp + heal);
+              gameController.ui.updatePartyStatus(gameController.selectedHeroes);
+              gameController.ui.showEvent('休息', `你休息了一会，恢复了${heal}点生命值。`, [{ text: '返回', onClick: () => EventTable.handleVillage(gameController, tile, content) }]);
+            }
+          },
+          {
+            text: '离开',
+            onClick: () => { }
+          }
+        ]
+      );
+    }
   // 事件类型定义
   static EVENTS = {
     TRAP: {
@@ -75,6 +130,14 @@ export class EventTable {
       description: 'Teleport?',
       tileContentType: TileContentType.PORTAL,
       handler: 'handlePortal'
+    },
+    VILLAGE: {
+      id: 'village',
+      title: '🏘️ 村庄',
+      spawnChance: 0,
+      description: '欢迎来到村庄。',
+      tileContentType: 'village',
+      handler: 'handleVillage'
     },
     NPC: {
       id: 'npc',

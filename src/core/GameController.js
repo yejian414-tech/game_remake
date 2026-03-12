@@ -1,8 +1,8 @@
 // src/core/GameController.js
 import { GameState, MapConfig, TurnConfig, MapPresets } from './Constants.js';
 import { HexMap, createMapByPreset } from '../world/HexMap.js';
-import { TileContentType, makePortal, makeBoss, TileType, makeNPC } from '../world/Tile.js';
-import { NPC_LIST } from '../data/EventTable.js';
+import { TileContentType, makePortal, makeBoss, TileType, makeNPC, makeVillage } from '../world/Tile.js';
+import { NPC_LIST, VILLAGE_LIST } from '../data/EventTable.js';
 import { StateMachine } from './StateMachine.js';
 import { CombatManager } from './CombatManager.js';
 import { Enemy } from '../entities/Enemy.js';
@@ -71,6 +71,15 @@ export class GameController {
           targetMap.placeContent(
             npc.q, npc.r,
             makeNPC(npc.name, npc.dialogue, npc.options || {}),
+            0
+          );
+        }
+        // 批量放置所有村庄
+        for (const village of VILLAGE_LIST) {
+          const targetMap = village.map === 'main' ? this.map : this.noviceVillage;
+          targetMap.placeContent(
+            village.q, village.r,
+            makeVillage(village.name),
             0
           );
         }
@@ -208,6 +217,8 @@ export class GameController {
       EventTable.handleLighthouse(this, tile);
     } else if (c.type === TileContentType.PORTAL) {
       EventTable.handlePortal(this, tile, c);
+    } else if (c.type === 'village') {
+      EventTable.handleVillage(this, tile, c);
     } else if (c.type === TileContentType.NPC) {
       EventTable.handleNPC(this, tile, c);
     }
