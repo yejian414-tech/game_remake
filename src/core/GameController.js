@@ -122,8 +122,13 @@ export class GameController {
     else if (this.fsm.currentState === GameState.COMBAT) { this.selectedHeroes.forEach(h => h.update(dt)); this.combatManager?.enemies.forEach(e => e.update(dt)); }
   }
   render(ctx, camera) {
-    if (this.fsm.currentState === GameState.MAP_EXPLORATION) Renderer.renderExploration(ctx, camera, this.map, this.player);
-    else if (this.fsm.currentState === GameState.COMBAT) Renderer.renderCombat(ctx, this.selectedHeroes, this.combatManager);
+    if (this.fsm.currentState === GameState.MAP_EXPLORATION) {
+      // 根据当前地图名渲染正确的地图
+      const currentMap = this.currentMapName === '新手村' ? this.noviceVillage : this.map;
+      Renderer.renderExploration(ctx, camera, currentMap, this.player);
+    } else if (this.fsm.currentState === GameState.COMBAT) {
+      Renderer.renderCombat(ctx, this.selectedHeroes, this.combatManager);
+    }
   }
 
   _startTurn() {
