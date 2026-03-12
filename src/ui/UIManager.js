@@ -132,6 +132,18 @@ export class UIManager {
     if (desc) desc.textContent = '在十回合内击败boss否则结束游戏';
   }
 
+  setProgressBarCritical() {
+    const bar = document.getElementById('turn-progress-bar');
+    document.body.classList.add('screen-flare');
+    if (bar) bar.classList.add('critical');
+  }
+
+  setProgressBarNormal() {
+    const bar = document.getElementById('turn-progress-bar');
+    document.body.classList.remove('screen-flare');
+    if (bar) bar.classList.remove('critical');
+  }
+
   showGameOver() {
     this.showEvent("💀 Game Over", "You failed to defeat the boss in time!", [{ text: "Restart", onClick: () => location.reload() }]);
   }

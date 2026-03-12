@@ -27,6 +27,8 @@ export class GameController {
     this.turnCount = 0;
     this.trapCooldown = 0;
     this.bossMode = false;
+    this.bossModePenaltyActive = false;
+    this.bossModePenaltyWarned = false;
     this.currentMaxTurns = TurnConfig.MAX_TURNS;
     this.currentMissionName = null;
     this.merchantEncountered = false;
@@ -170,17 +172,41 @@ export class GameController {
   }
 
   _startTurn() {
-    this.turnCount += 1; this.ui.updateProgressBar(this.turnCount, this.currentMaxTurns);
+    this.turnCount += 1; 
+    this.ui.updateProgressBar(this.turnCount, this.currentMaxTurns);
     const roller = this.selectedHeroes.length > 0 ? this.selectedHeroes.reduce((a, b) => ((a.speed ?? 0) >= (b.speed ?? 0) ? a : b)) : this.player;
     const total = rollSpeed(roller, 0.5, 20).gradeIndex + 1;
-    this.player.movementPoints = total; this.ui.updateMovementUI(total); this.ui.updatePartyStatus(this.selectedHeroes);
+    this.player.movementPoints = total; 
+    this.ui.updateMovementUI(total); 
+    this.ui.updatePartyStatus(this.selectedHeroes);
     if (this.trapCooldown > 0) this.trapCooldown--;
-    if (!this.bossMode && this.turnCount === TurnConfig.MAX_TURNS) {
+    
+    // Boss惩罚阶段：每回合扣除英雄最大血量的5%
+    if (this.bossModePenaltyActive) {
+      const damage = Math.max(1, Math.floor(this.selectedHeroes[0]?.maxHp || 100) * 0.05);
+      for (const hero of this.selectedHeroes) {
+        hero.hp = Math.max(0, hero.hp - damage);
+      }
+      // 只在第一次显示提示
+      if (!this.bossModePenaltyWarned) {
+        this.bossModePenaltyWarned = true;
+        this.ui.showEvent(
+          '⚠️ 威胁',
+          `每一刻的耽搁都在削弱你的生命力！\n每名英雄扣除 -${damage} HP (最大生命值的5%)`,
+          [{ text: '继续', onClick: () => {} }]
+        );
+      }
+      this.ui.updatePartyStatus(this.selectedHeroes);
+    }
+    
+    if (!this.bossMode && this.turnCount === this.currentMaxTurns) {
       // 进入boss模式
       this.bossMode = true;
+      this.bossModePenaltyActive = true;
       this.turnCount = 0;
       this.currentMaxTurns = 10;
       this.ui.updateBossMode();
+      this.ui.setProgressBarCritical();
       // 震动屏幕
       document.body.classList.add('shake');
       setTimeout(() => document.body.classList.remove('shake'), 500);
