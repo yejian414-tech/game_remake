@@ -2,6 +2,7 @@
 import { MapConfig, MapPresets } from '../core/Constants.js';
 import { EventTable } from '../data/EventTable.js';
 import { SeededRandom } from '../utils/SeededRandom.js';
+
 export function createMapByPreset(presetName) {
   const preset = MapPresets[presetName];
   if (!preset) throw new Error('地图预设未找到: ' + presetName);
@@ -10,6 +11,7 @@ export function createMapByPreset(presetName) {
   map.generateEvents();
   return map;
 }
+
 // src/world/HexMap.js
 import { Tile, TileType } from './Tile.js';
 
@@ -68,7 +70,7 @@ export class HexMap {
    * @param {number} q
    * @param {number} r
    * @param {object} content   makeDungeon / makeBoss / makeTreasure 的返回值
-   * @param {number} [revealRadius=1]  同时揭示的半径，默认揭示自身 + 周围一圈
+   * @param {number} [revealRadius=2]  同时揭示的半径，默认揭示自身 + 周围一圈
    */
   placeContent(q, r, content, revealRadius = 2) {
     const tile = this.getTile(q, r);
@@ -101,7 +103,7 @@ export class HexMap {
    * @param {Camera} camera
    * @param {number} playerQ   玩家当前格 q（用于计算当前视野）
    * @param {number} playerR   玩家当前格 r
-   * @param {number} [sightRadius=2]  可见半径（格数）
+   * @param {number} [sightRadius=4]  可见半径（格数）
    * @param {boolean} [debugMode=false]  是否显示坐标
    */
   draw(ctx, camera, playerQ, playerR, sightRadius = 4, debugMode = false) {
@@ -115,13 +117,8 @@ export class HexMap {
       if (!tile.isRevealed) {
         visState = 'hidden';
       } else {
-        // 六边形轴坐标距离
-        const dist = Math.max(
-          Math.abs(tile.q - playerQ),
-          Math.abs(tile.r - playerR),
-          Math.abs((tile.q + tile.r) - (playerQ + playerR))
-        );
-        visState = dist <= sightRadius ? 'visible' : 'explored';
+        // ✅ 已探索的格子永远完全显示，不再加暗色蒙版
+        visState = 'visible';
       }
 
       tile.draw(ctx, this.tileSize, false, visState, debugMode);
