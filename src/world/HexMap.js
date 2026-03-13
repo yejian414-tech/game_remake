@@ -37,7 +37,6 @@ export class HexMap {
     this.generateBarrier();
   }
 
-
   getTile(q, r) { return this.tiles.get(`${q},${r}`); }
 
   generateBarrier() {
@@ -108,6 +107,7 @@ export class HexMap {
   draw(ctx, camera, playerQ, playerR, sightRadius = 4, debugMode = false) {
     ctx.save();
     ctx.translate(camera.x, camera.y);
+    ctx.scale(camera.zoom ?? 1, camera.zoom ?? 1); // 缩放支持
 
     this.tiles.forEach(tile => {
       let visState;

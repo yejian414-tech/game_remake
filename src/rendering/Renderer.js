@@ -14,14 +14,13 @@ export class Renderer {
       ctx.drawImage(bgImg, 0, 0, ctx.canvas.width, ctx.canvas.height);
     }
 
-
-
     // 3. 绘制瓦片地图（传递调试模式）
     map.draw(ctx, camera, player.q, player.r, 4, this.debugMode);
 
-    // 4. 绘制玩家角色
+    // 4. 绘制玩家角色（跟随 zoom 缩放）
     ctx.save();
     ctx.translate(Math.round(camera.x), Math.round(camera.y));
+    ctx.scale(camera.zoom ?? 1, camera.zoom ?? 1); // 缩放支持
     player.draw(ctx, map.tileSize);
     ctx.restore();
   }
