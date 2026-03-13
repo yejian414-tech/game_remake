@@ -1,40 +1,3 @@
-// 村庄内容生成器
-export function makeVillage(name = '村庄') {
-  return {
-    type: 'village',
-    name,
-    dialogue: '欢迎来到村庄。',
-    iconType: 'greenCircle',
-  };
-}
-
-// 商人内容生成器
-export function makeMerchant(name = '旅商') {
-  return {
-    type: 'merchant',
-    name,
-    iconType: 'blueCircle',
-  };
-}
-
-// 遗迹内容生成器
-export function makeRuin(name = '古代遗迹入口', enemyName = '腐化守卫') {
-  return {
-    type: 'ruin',
-    name,
-    enemyName,
-    iconType: 'purpleCircle',
-  };
-}
-
-// 被腐化的鹿内容生成器
-export function makeCorruptedDeer(name = '被腐化的鹿') {
-  return {
-    type: 'corruptedDeer',
-    name,
-    iconType: 'blackCircle',
-  };
-}
 // src/world/Tile.js
 import { DataLoader } from '../data/DataLoader.js';
 
@@ -46,32 +9,32 @@ export const TileType = {
   BOUNDARY: { id: 4, color: '#8b4513', name: 'Boundary', moveCost: Infinity },
 };
 
+// ── 内容类型枚举（统一用常量，不再散落裸字符串）─────────────
 export const TileContentType = {
   DUNGEON: 'dungeon',
   BOSS: 'boss',
   TREASURE: 'treasure',
-  ALTAR: 'altar', 
+  ALTAR: 'altar',
   LIGHTHOUSE: 'lighthouse',
-  PORTAL: 'portal', // 传送阵
-  NPC: 'npc', // 新增NPC类型
+  PORTAL: 'portal',
+  NPC: 'npc',
+  VILLAGE: 'village',        // ← 新增
+  MERCHANT: 'merchant',       // ← 新增
+  RUIN: 'ruin',           // ← 新增
+  CORRUPTED_DEER: 'corruptedDeer',  // ← 新增
 };
-// NPC内容生成器
-/**
- * 创建一个NPC事件内容对象
- * @param {string} name - NPC名字
- * @param {string} dialogue - NPC对话文本
- * @param {Object} [options] - 额外选项，如基于物品的能力
- * @returns {Object}
- */
+
+// ── 内容生成器 ───────────────────────────────────────────────
+
 export function makeNPC(name, dialogue = '你好，旅行者！', options = {}) {
   return {
     type: TileContentType.NPC,
     name,
     dialogue,
-    ...options // 支持扩展：如iconType、基于物品的能力等
+    ...options,
   };
 }
-// 传送阵内容生成器
+
 export function makePortal(targetMap, targetQ, targetR) {
   return { type: TileContentType.PORTAL, name: '传送阵', targetMap, targetQ, targetR };
 }
@@ -88,12 +51,50 @@ export function makeTreasure(lootTier = 1) {
   const tierName = ['', 'Common Chest', 'Rare Chest', 'Epic Chest'][lootTier] ?? 'Common Chest';
   return { type: TileContentType.TREASURE, name: tierName, lootTier };
 }
+
 export function makeAltar(level = 1) {
-  return { type: TileContentType.ALTAR, name: "Mysterious Altar", level };
+  return { type: TileContentType.ALTAR, name: 'Mysterious Altar', level };
 }
+
 export function makeLighthouse(level = 1) {
-  return { type: TileContentType.LIGHTHOUSE, name: "Ancient Lighthouse", level };
+  return { type: TileContentType.LIGHTHOUSE, name: 'Ancient Lighthouse', level };
 }
+
+export function makeVillage(name = '村庄') {
+  return {
+    type: TileContentType.VILLAGE,   // ← 改为常量
+    name,
+    dialogue: '欢迎来到村庄。',
+    iconType: 'greenCircle',
+  };
+}
+
+export function makeMerchant(name = '旅商') {
+  return {
+    type: TileContentType.MERCHANT,  // ← 改为常量
+    name,
+    iconType: 'blueCircle',
+  };
+}
+
+export function makeRuin(name = '古代遗迹入口', enemyName = '腐化守卫') {
+  return {
+    type: TileContentType.RUIN,      // ← 改为常量
+    name,
+    enemyName,
+    iconType: 'purpleCircle',
+  };
+}
+
+export function makeCorruptedDeer(name = '被腐化的鹿') {
+  return {
+    type: TileContentType.CORRUPTED_DEER, // ← 改为常量
+    name,
+    iconType: 'blackCircle',
+  };
+}
+
+// ── Tile 类 ──────────────────────────────────────────────────
 
 export class Tile {
   constructor(q, r, type = TileType.GRASS) {
@@ -137,101 +138,73 @@ export class Tile {
 
     ctx.save();
     hexPath();
-    ctx.fillStyle = '#4a7c2c'; // 匹配草地的深色基调
+    ctx.fillStyle = '#4a7c2c';
     ctx.fill();
     ctx.strokeStyle = '#4a7c2c';
-    ctx.lineWidth = 1; 
+    ctx.lineWidth = 1;
     ctx.stroke();
     ctx.restore();
 
-
     const imgW = size * 2;
     const imgH = size * Math.sqrt(3);
-    // 2. 绘制地形图片 (完全取代原来的色块填充)
-    let terrainKey = '';
-    if (this.type.id === 0) terrainKey = `grass_${this.variant}`; // 草地
-    else if (this.type.id === 1) terrainKey = `forest_${this.variant}`; // 森林
-    else if (this.type.id === 2) terrainKey = `mountain_${this.variant}`; // 山脉
-    else if (this.type.id === 3) terrainKey = `barrier_${this.variant}`; // 障碍物
-    else if (this.type.id === 4) terrainKey = `boundary_${this.variant}`; // 边界
-    else terrainKey = `grass_1`; // 默认地形
+
+    // 2. 绘制地形图片
+    const TERRAIN_KEYS = ['grass', 'forest', 'mountain', 'barrier', 'boundary'];
+    const terrainKey = `${TERRAIN_KEYS[this.type.id] ?? 'grass'}_${this.variant}`;
 
     const terrainImg = DataLoader.getImage(terrainKey);
     if (terrainImg) {
-    // 计算平顶六边形的正确比例
-    const bleed = 0.5; 
-    ctx.drawImage(
-      terrainImg, 
-      x - size - bleed / 2,      // 水平起点微调
-      y - imgH / 2 - bleed / 2,  // 垂直起点微调
-      imgW + bleed,              // 宽度微增
-      imgH + bleed            // 高度
-    );
-  }
+      const bleed = 0.5;
+      ctx.drawImage(
+        terrainImg,
+        x - size - bleed / 2,
+        y - imgH / 2 - bleed / 2,
+        imgW + bleed,
+        imgH + bleed,
+      );
+    }
 
-  // 绘制内容图片 (Dungeon, Boss, NPC等图标)
-  if (this.content && visState === 'visible') {
-    // 检查是否有自定义iconType（用于圆圈图标）
-    const iconType = this.content.iconType;
-    if (iconType === 'redCircle' || iconType === 'greenCircle' || iconType === 'blueCircle' || iconType === 'purpleCircle' || iconType === 'blackCircle') {
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x, y, size * 0.55, 0, Math.PI * 2);
-      let color = 'red';
-      if (iconType === 'greenCircle') color = 'green';
-      else if (iconType === 'blueCircle') color = 'blue';
-      else if (iconType === 'purpleCircle') color = 'purple';
-      else if (iconType === 'blackCircle') color = 'black';
-      ctx.fillStyle = color;
-      ctx.globalAlpha = 0.85;
-      ctx.shadowColor = '#fff';
-      ctx.shadowBlur = 8;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#fff';
-      ctx.stroke();
-      ctx.restore();
-    } else if (this.content.type === TileContentType.NPC) {
-      // 根据iconType渲染不同NPC图标，默认红圈
-      const defaultIconType = this.content.iconType || 'redCircle';
-      if (defaultIconType === 'redCircle') {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, size * 0.55, 0, Math.PI * 2);
-        ctx.fillStyle = 'red';
-        ctx.globalAlpha = 0.85;
-        ctx.shadowColor = '#fff';
-        ctx.shadowBlur = 8;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.shadowBlur = 0;
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#fff';
-        ctx.stroke();
-        ctx.restore();
-      }
-      // 未来可扩展更多iconType
-    } else {
-      const contentImg = DataLoader.getImage(this.content.type);
-      if (contentImg) {
-        // 设置缩放比例，例如 0.85 表示图标大小为格子的 85%，留下 15% 的边框缝隙
-        const scale = 0.92;
-        // 计算缩放后的宽度和高度
-        const imgW = (size * 2) * scale;
-        const imgH = (size * Math.sqrt(3)) * scale;
-        // 使用缩放后的宽高，并重新计算起始坐标 (x - 宽/2, y - 高/2) 以确保图标依然在格子中心
-        ctx.drawImage(
-          contentImg,
-          x - imgW / 2, // 水平居中偏移
-          y - imgH / 2, // 垂直居中偏移
-          imgW,
-          imgH
-        );
+    // 3. 绘制内容图片 (Dungeon, Boss, NPC 等图标)
+    if (this.content && visState === 'visible') {
+      const iconType = this.content.iconType;
+
+      // 圆圈图标（village / merchant / ruin / corruptedDeer / NPC 等）
+      if (iconType) {
+        const CIRCLE_COLOR_MAP = {
+          redCircle: 'red',
+          greenCircle: 'green',
+          blueCircle: 'blue',
+          purpleCircle: 'purple',
+          blackCircle: 'black',
+        };
+        const color = CIRCLE_COLOR_MAP[iconType];
+        if (color) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, size * 0.55, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.85;
+          ctx.shadowColor = '#fff';
+          ctx.shadowBlur = 8;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#fff';
+          ctx.stroke();
+          ctx.restore();
+        }
+      } else {
+        // 图片图标（dungeon / boss / treasure 等）
+        const contentImg = DataLoader.getImage(this.content.type);
+        if (contentImg) {
+          const scale = 0.92;
+          const iw = size * 2 * scale;
+          const ih = size * Math.sqrt(3) * scale;
+          ctx.drawImage(contentImg, x - iw / 2, y - ih / 2, iw, ih);
+        }
       }
     }
-  }
 
     // 4. 绘制选中边框
     if (isSelected) {
@@ -248,7 +221,7 @@ export class Tile {
       ctx.fill();
     }
 
-    // 6. debug模式下显示坐标
+    // 6. debug 模式下显示坐标
     if (debugMode && visState !== 'hidden') {
       ctx.save();
       ctx.font = `${Math.floor(size * 0.45)}px monospace`;

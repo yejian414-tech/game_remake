@@ -14,13 +14,13 @@ export class Renderer {
       ctx.drawImage(bgImg, 0, 0, ctx.canvas.width, ctx.canvas.height);
     }
 
-    // 3. 绘制瓦片地图（传递调试模式）
-    map.draw(ctx, camera, player.q, player.r, 4, this.debugMode);
+    // 2. 绘制瓦片地图
+    map.draw(ctx, camera, this.debugMode);
 
-    // 4. 绘制玩家角色（跟随 zoom 缩放）
+    // 3. 绘制玩家角色（跟随 zoom 缩放）
     ctx.save();
     ctx.translate(Math.round(camera.x), Math.round(camera.y));
-    ctx.scale(camera.zoom ?? 1, camera.zoom ?? 1); // 缩放支持
+    ctx.scale(camera.zoom ?? 1, camera.zoom ?? 1);
     player.draw(ctx, map.tileSize);
     ctx.restore();
   }
@@ -45,11 +45,16 @@ export class Renderer {
   }
 
   static _drawHealthBar(ctx, unit) {
-    const BAR_W = 80; const BAR_H = 8; const x = unit.x - BAR_W / 2; const y = unit.y + 45;
-    ctx.fillStyle = '#333'; ctx.fillRect(x, y, BAR_W, BAR_H);
+    const BAR_W = 80, BAR_H = 8;
+    const x = unit.x - BAR_W / 2;
+    const y = unit.y + 45;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x, y, BAR_W, BAR_H);
     const ratio = Math.max(0, unit.hp / unit.maxHp);
     ctx.fillStyle = unit.type === 'player' ? '#2ecc71' : '#e74c3c';
     ctx.fillRect(x, y, BAR_W * ratio, BAR_H);
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.strokeRect(x, y, BAR_W, BAR_H);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, BAR_W, BAR_H);
   }
 }

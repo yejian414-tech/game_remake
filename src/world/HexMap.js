@@ -1,19 +1,18 @@
-// 新手村地图工厂
-import { MapConfig, MapPresets } from '../core/Constants.js';
+// src/world/HexMap.js
+import { Tile, TileType } from './Tile.js';
 import { EventTable } from '../data/EventTable.js';
+import { MapPresets } from '../core/Constants.js';
 import { SeededRandom } from '../utils/SeededRandom.js';
 
+// ── 地图工厂（按预设名创建）────────────────────────────────────
 export function createMapByPreset(presetName) {
   const preset = MapPresets[presetName];
   if (!preset) throw new Error('地图预设未找到: ' + presetName);
   const map = new HexMap(preset.radius, preset.tileSize, SeededRandom.randomSeed());
-  // 事件地形逻辑可根据preset.eventLogic扩展
+  // 事件地形逻辑可根据 preset.eventLogic 扩展
   map.generateEvents();
   return map;
 }
-
-// src/world/HexMap.js
-import { Tile, TileType } from './Tile.js';
 
 export class HexMap {
   constructor(radius, tileSize = 30, seed = SeededRandom.randomSeed()) {
@@ -42,7 +41,7 @@ export class HexMap {
   getTile(q, r) { return this.tiles.get(`${q},${r}`); }
 
   generateBarrier() {
-    // 将真正的最外层瓷砖设为boundary并标记为已揭示
+    // 最外层瓷砖设为 boundary 并标记为已揭示
     for (const tile of this.tiles.values()) {
       const dist = Math.max(Math.abs(tile.q), Math.abs(tile.r), Math.abs(tile.q + tile.r));
       if (dist === this.radius) {
@@ -52,7 +51,7 @@ export class HexMap {
     }
   }
 
-  // ── 揭示周围一圈 ─────────────────────────────────────────
+  // ── 揭示周围一圈 ─────────────────────────────────────────────
   revealAround(q, r, revealRadius = 1) {
     for (let dq = -revealRadius; dq <= revealRadius; dq++) {
       for (let dr = -revealRadius; dr <= revealRadius; dr++) {
@@ -64,12 +63,12 @@ export class HexMap {
   }
 
   /**
-   * 放置事件内容，并自动揭示该格 + 周围一圈战争迷雾。
+   * 放置事件内容，并自动揭示该格 + 周围几圈战争迷雾。
    * 所有往 tile 上写 content 的地方都应改用此方法。
    *
    * @param {number} q
    * @param {number} r
-   * @param {object} content   makeDungeon / makeBoss / makeTreasure 的返回值
+   * @param {object} content      makeDungeon / makeBoss / makeTreasure 的返回值
    * @param {number} [revealRadius=2]  同时揭示的半径，默认揭示自身 + 周围一圈
    */
   placeContent(q, r, content, revealRadius = 2) {
@@ -99,28 +98,19 @@ export class HexMap {
   }
 
   /**
+   * 绘制地图
+   *
    * @param {CanvasRenderingContext2D} ctx
    * @param {Camera} camera
-   * @param {number} playerQ   玩家当前格 q（用于计算当前视野）
-   * @param {number} playerR   玩家当前格 r
-   * @param {number} [sightRadius=4]  可见半径（格数）
    * @param {boolean} [debugMode=false]  是否显示坐标
    */
-  draw(ctx, camera, playerQ, playerR, sightRadius = 4, debugMode = false) {
+  draw(ctx, camera, debugMode = false) {
     ctx.save();
     ctx.translate(camera.x, camera.y);
-    ctx.scale(camera.zoom ?? 1, camera.zoom ?? 1); // 缩放支持
+    ctx.scale(camera.zoom ?? 1, camera.zoom ?? 1);
 
     this.tiles.forEach(tile => {
-      let visState;
-
-      if (!tile.isRevealed) {
-        visState = 'hidden';
-      } else {
-        // ✅ 已探索的格子永远完全显示，不再加暗色蒙版
-        visState = 'visible';
-      }
-
+      const visState = tile.isRevealed ? 'visible' : 'hidden';
       tile.draw(ctx, this.tileSize, false, visState, debugMode);
     });
 
@@ -141,17 +131,10 @@ export class HexMap {
       }
     });
 
-    // 保证每种事件生成一次
-    const eventTypes = [
-      'ALTAR',
-      'DUNGEON',
-      'TREASURE_COMMON',
-      'LIGHTHOUSE'
-    ];
-
+    // 保证每种事件至少生成一次
+    const eventTypes = ['ALTAR', 'DUNGEON', 'TREASURE_COMMON', 'LIGHTHOUSE'];
     const generatedTypes = new Set();
 
-    // 随机选择4个不同的内部瓦片
     const shuffled = internalTiles.slice().sort(() => this.rng.next() - 0.5);
     for (let i = 0; i < Math.min(4, shuffled.length); i++) {
       if (!shuffled[i].content) {
@@ -161,7 +144,7 @@ export class HexMap {
       }
     }
 
-    // 然后随机生成其他事件
+    // 随机生成其他事件
     this.tiles.forEach(tile => {
       if (tile.type.id === 2 || tile.type.id === 3) return; // 山脉和屏障不生成事件
       if (tile.content) return; // 已有事件
