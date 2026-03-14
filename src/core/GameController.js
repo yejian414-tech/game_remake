@@ -13,6 +13,7 @@ import { Renderer } from '../rendering/Renderer.js';
 import { rollRandomItem } from '../data/items.js';
 import { GameStory } from './GameStory.js';
 import { EventTable } from '../data/EventTable.js';
+import { findPath } from '../utils/Pathfinder.js';   // ← 新增：A* 寻路
 
 export class GameController {
   constructor(map, player, ui, camera) {
@@ -32,12 +33,11 @@ export class GameController {
     this.currentMaxTurns = TurnConfig.MAX_TURNS;
     this.currentMissionName = null;
     this.merchantEncountered = false;
+    this._isMoving = false;   // ← 新增：路径动画锁，移动中屏蔽新点击
     this.gameStory = new GameStory(ui);
     this.fsm = new StateMachine(GameState.INITIALIZING);
     this._setupStates();
   }
-
-
 
   _setupStates() {
     this.fsm.addState(GameState.CHARACTER_SELECT, {
@@ -255,27 +255,83 @@ export class GameController {
 
   onEndTurnBtnClick() { this._startTurn(); }
 
+  // ── 寻路移动（替换旧的直线限制移动）────────────────────────────
+
+  /**
+   * 玩家点击目标格后触发，使用 A* 寻路并逐步动画移动。
+   *
+   * 寻路规则：
+   *   - moveCost = Infinity 的地形（森林/山脉/屏障）不可通行
+   *   - 带事件内容的格子（地牢/宝箱/灯塔…）不能作为途经点，只能作为终点
+   *   - 总路径代价不能超过当前移动力
+   */
   movePlayer(q, r) {
-    if (this.fsm.currentState !== GameState.MAP_EXPLORATION || (q === this.player.q && r === this.player.r)) return;
-    const dq = q - this.player.q, dr = r - this.player.r;
-    if (!(dq === 0 || dr === 0 || (dq + dr) === 0)) return;
+    if (this.fsm.currentState !== GameState.MAP_EXPLORATION) return;
+    if (q === this.player.q && r === this.player.r) return;
+    if (this._isMoving) return; // 动画进行中，忽略新点击
 
     const curMap = this.currentMapName === '新手村' ? this.noviceVillage : this.map;
-    const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr));
+
+    // 目标格地形必须可通行
     const tile = curMap.getTile(q, r);
-    if (!tile) return;
-    if (!isFinite(tile.type.moveCost)) return;
+    if (!tile || !isFinite(tile.type.moveCost)) return;
 
-    const moveCost = tile.type.moveCost * dist;
-    if (this.player.movementPoints < moveCost) return;
+    // A* 寻路，受当前移动力约束
+    const result = findPath(
+      curMap,
+      this.player.q, this.player.r,
+      q, r,
+      this.player.movementPoints,
+    );
 
-    this.player.setGridPos(q, r, curMap);
-    this.player.movementPoints -= moveCost;
-    this.ui.updateMovementUI(this.player.movementPoints);
-    curMap.revealAround(q, r, 2);
-    this._handleTileContent(tile);
-    this.ui.updatePartyStatus(this.selectedHeroes);
+    // 不可达 / 移动力不足 → 忽略
+    if (!result || result.path.length === 0) return;
+
+    this._walkPath(result.path, curMap);
   }
+
+  /**
+   * 按路径逐格移动玩家，每步间隔 150ms（视觉动画）。
+   * 只在抵达最后一格时触发 tile content 事件。
+   *
+   * @param {Array<{q:number, r:number}>} path  不含起点的路径格数组
+   * @param {HexMap} curMap
+   */
+  _walkPath(path, curMap) {
+    this._isMoving = true;
+    let stepIndex = 0;
+
+    const doStep = () => {
+      if (stepIndex >= path.length) {
+        this._isMoving = false;
+        return;
+      }
+
+      const { q, r } = path[stepIndex];
+      stepIndex++;
+
+      const tile = curMap.getTile(q, r);
+      if (!tile) { this._isMoving = false; return; }
+
+      this.player.setGridPos(q, r, curMap);
+      this.player.movementPoints -= tile.type.moveCost;
+      this.ui.updateMovementUI(this.player.movementPoints);
+      curMap.revealAround(q, r, 2);
+      this.ui.updatePartyStatus(this.selectedHeroes);
+
+      const isLast = stepIndex >= path.length;
+      if (isLast) {
+        this._isMoving = false;
+        this._handleTileContent(tile); // 仅终点触发事件
+      } else {
+        setTimeout(doStep, 150); // 每步间隔 150ms
+      }
+    };
+
+    doStep();
+  }
+
+  // ── Tile 事件处理 ────────────────────────────────────────────────
 
   _handleTileContent(tile) {
     if (!tile.content) {
@@ -297,20 +353,21 @@ export class GameController {
       EventTable.handleLighthouse(this, tile);
     } else if (c.type === TileContentType.PORTAL) {
       EventTable.handlePortal(this, tile, c);
-    } else if (c.type === TileContentType.VILLAGE) {       // ← 改为常量
+    } else if (c.type === TileContentType.VILLAGE) {
       EventTable.handleVillage(this, tile, c);
-    } else if (c.type === TileContentType.MERCHANT) {      // ← 改为常量
+    } else if (c.type === TileContentType.MERCHANT) {
       EventTable.handleMerchant(this, tile, c);
-    } else if (c.type === TileContentType.RUIN) {          // ← 改为常量
+    } else if (c.type === TileContentType.RUIN) {
       EventTable.handleRuin(this, tile, c);
-    } else if (c.type === TileContentType.CORRUPTED_DEER) { // ← 改为常量
+    } else if (c.type === TileContentType.CORRUPTED_DEER) {
       EventTable.handleCorruptedDeer(this, tile, c);
     } else if (c.type === TileContentType.NPC) {
       EventTable.handleNPC(this, tile, c);
     }
   }
 
-  // ── 切换地图 ─────────────────────────────────────────────────
+  // ── 切换地图 ─────────────────────────────────────────────────────
+
   _switchMap(targetMapName, q, r) {
     if (targetMapName === this.currentMapName) return;
     const targetMap = targetMapName === '新手村' ? this.noviceVillage : this.map;
@@ -319,7 +376,7 @@ export class GameController {
     this.player.setGridPos(q, r, targetMap);
     targetMap.revealAround(q, r, 5);
     if (this.camera) {
-      const bottomLeft = this.hexToPixel(q, r, targetMap.tileSize);
+      const bottomLeft = hexToPixel(q, r, targetMap.tileSize);
       this.camera.x = MapConfig.PADDING - bottomLeft.x;
       this.camera.y = window.innerHeight - MapConfig.PADDING - bottomLeft.y;
     }
