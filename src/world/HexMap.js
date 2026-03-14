@@ -1,57 +1,41 @@
 // src/world/HexMap.js
 import { Tile, TileType } from './Tile.js';
-import { EventTable } from '../data/EventTable.js';
+import { MapGenerator } from './MapGenerator.js';
 import { MapPresets } from '../core/Constants.js';
 import { SeededRandom } from '../utils/SeededRandom.js';
 
-// ── 地图工厂（按预设名创建）────────────────────────────────────
+// ── 地图工厂（按预设名创建）────────────────────────────────────────
 export function createMapByPreset(presetName) {
   const preset = MapPresets[presetName];
   if (!preset) throw new Error('地图预设未找到: ' + presetName);
-  const map = new HexMap(preset.radius, preset.tileSize, SeededRandom.randomSeed());
-  // 事件地形逻辑可根据 preset.eventLogic 扩展
-  map.generateEvents();
-  return map;
+  return new HexMap(preset.radius, preset.tileSize, SeededRandom.randomSeed());
 }
 
+/**
+ * HexMap
+ *
+ * 六边形地图的数据容器，只负责存储 Tile 和提供查询/操作接口。
+ * 所有生成逻辑（地形、屏障、事件）均委托给 MapGenerator。
+ */
 export class HexMap {
   constructor(radius, tileSize = 30, seed = SeededRandom.randomSeed()) {
     this.radius = radius;
     this.tileSize = tileSize;
     this.rng = new SeededRandom(seed);
     this.tiles = new Map();
-    this.generateMap();
+
+    // 委托 MapGenerator 完成所有生成步骤
+    const gen = new MapGenerator(this.rng);
+    gen.generateTerrain(this);
+    gen.generateEvents(this);
   }
 
-  generateMap() {
-    for (let q = -this.radius; q <= this.radius; q++) {
-      const r1 = Math.max(-this.radius, -q - this.radius);
-      const r2 = Math.min(this.radius, -q + this.radius);
-      for (let r = r1; r <= r2; r++) {
-        let type = TileType.GRASS;
-        const roll = this.rng.next();
-        if (roll > 0.90) type = TileType.MOUNTAIN;
-        else if (roll > 0.82) type = TileType.FOREST;
-        this.tiles.set(`${q},${r}`, new Tile(q, r, type));
-      }
-    }
-    this.generateBarrier();
+  // ── 查询 ───────────────────────────────────────────────────────────
+  getTile(q, r) {
+    return this.tiles.get(`${q},${r}`);
   }
 
-  getTile(q, r) { return this.tiles.get(`${q},${r}`); }
-
-  generateBarrier() {
-    // 最外层瓷砖设为 boundary 并标记为已揭示
-    for (const tile of this.tiles.values()) {
-      const dist = Math.max(Math.abs(tile.q), Math.abs(tile.r), Math.abs(tile.q + tile.r));
-      if (dist === this.radius) {
-        tile.type = TileType.BOUNDARY;
-        tile.isRevealed = true;
-      }
-    }
-  }
-
-  // ── 揭示周围一圈 ─────────────────────────────────────────────
+  // ── 揭示周围一圈 ───────────────────────────────────────────────────
   revealAround(q, r, revealRadius = 1) {
     for (let dq = -revealRadius; dq <= revealRadius; dq++) {
       for (let dr = -revealRadius; dr <= revealRadius; dr++) {
@@ -78,6 +62,7 @@ export class HexMap {
     this.revealAround(q, r, revealRadius);
   }
 
+  // ── 坐标转换 ───────────────────────────────────────────────────────
   pixelToHex(x, y) {
     const q = (2 / 3 * x) / this.tileSize;
     const r = (-1 / 3 * x + Math.sqrt(3) / 3 * y) / this.tileSize;
@@ -97,9 +82,9 @@ export class HexMap {
     return { q: rq, r: rr };
   }
 
+  // ── 绘制 ───────────────────────────────────────────────────────────
   /**
    * 绘制地图
-   *
    * @param {CanvasRenderingContext2D} ctx
    * @param {Camera} camera
    * @param {boolean} [debugMode=false]  是否显示坐标
@@ -115,62 +100,5 @@ export class HexMap {
     });
 
     ctx.restore();
-  }
-
-  generateEvents() {
-    const q0 = -this.radius;
-    const r0 = this.radius;
-    const internalTiles = [];
-    this.tiles.forEach(tile => {
-      const dq = tile.q - q0;
-      const dr = tile.r - r0;
-      const ds = -dq - dr;
-      const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
-      if (dist <= 4 && tile.type.id !== 3) {
-        internalTiles.push(tile);
-      }
-    });
-
-    // 保证每种事件至少生成一次
-    const eventTypes = ['ALTAR', 'DUNGEON', 'TREASURE_COMMON', 'LIGHTHOUSE'];
-    const generatedTypes = new Set();
-
-    const shuffled = internalTiles.slice().sort(() => this.rng.next() - 0.5);
-    for (let i = 0; i < Math.min(4, shuffled.length); i++) {
-      if (!shuffled[i].content) {
-        const content = EventTable.createContentByType(eventTypes[i]);
-        shuffled[i].content = content;
-        generatedTypes.add(EventTable.getContentDedupeKey(content));
-      }
-    }
-
-    // 随机生成其他事件
-    this.tiles.forEach(tile => {
-      if (tile.type.id === 2 || tile.type.id === 3) return; // 山脉和屏障不生成事件
-      if (tile.content) return; // 已有事件
-
-      const dq = tile.q - q0;
-      const dr = tile.r - r0;
-      const ds = -dq - dr;
-      const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
-      const roll = this.rng.next();
-
-      const location = dist > 4 ? 'OUTSIDE_BARRIER' : 'INSIDE_BARRIER';
-      const eventType = EventTable.getEventTypeByRoll(roll, location);
-
-      if (!eventType) return;
-
-      // 屏障内部需要检查是否已生成过该类型
-      if (location === 'INSIDE_BARRIER') {
-        const dedupeKey = EventTable.getContentDedupeKey(EventTable.createContentByType(eventType));
-        if (generatedTypes.has(dedupeKey)) return;
-        generatedTypes.add(dedupeKey);
-      }
-
-      const content = EventTable.createContentByType(eventType);
-      if (content) {
-        tile.content = content;
-      }
-    });
   }
 }
