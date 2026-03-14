@@ -4,31 +4,26 @@
 import {
   Tile, TileType, TileContentType,
   makeDungeon, makeBoss, makeTreasure,
-  makeAltar, makeLighthouse, makeNPC
+  makeAltar, makeLighthouse, makeNPC,
 } from './Tile.js';
+import { HexMap } from './HexMap.js';
 
 /**
  * MapGenerator
  *
  * 负责对一个已存在的 HexMap 实例执行所有生成步骤：
- *   1. generateTerrain  —— 填充地形 Tile
+ *   1. generateTerrain  —— 填充地形 Tile（传入 rng，保证 variant 可复现）
  *   2. generateBarrier  —— 标记最外层为 BOUNDARY（由 generateTerrain 自动调用）
  *   3. generateEvents   —— 按概率放置随机事件内容
  *
- * 外部调用示例：
- *   const gen = new MapGenerator(map.rng);
- *   gen.generateTerrain(map);
- *   gen.generateEvents(map);
- *
- * 静态工具方法可独立使用：
- *   MapGenerator.rollEventType(roll)   → 事件类型字符串
- *   MapGenerator.createContent(type)   → tile.content 对象
- *   MapGenerator.getDedupeKey(content) → 去重键字符串
+ * 优化点：
+ *  - 内圈保底 shuffle 改为无偏的 Fisher-Yates 算法。
+ *  - Tile 构造时传入 rng，消除 Math.random() 非种子调用。
+ *  - 使用 HexMap.setTile() 而非直接操作 map.tiles，兼容整数 key。
  */
 export class MapGenerator {
 
-  // ── 概率表（从高到低依次匹配，roll > threshold 则命中）──────────
-  // 内圈与外圈当前使用同一套概率，若将来需要差异化再拆为两张表。
+  // ── 概率表（roll > threshold 则命中，从高到低依次匹配）──────────
   static ROLL_TABLE = [
     { threshold: 0.975, type: 'ALTAR' },
     { threshold: 0.950, type: 'DUNGEON' },
@@ -42,19 +37,15 @@ export class MapGenerator {
   static GUARANTEED_EVENTS = ['ALTAR', 'DUNGEON', 'TREASURE_COMMON', 'LIGHTHOUSE'];
 
   /**
-   * @param {SeededRandom} rng - 随机数生成器（与 HexMap 共享同一实例以保证种子一致）
+   * @param {SeededRandom} rng - 与 HexMap 共享同一实例，保证种子一致性
    */
   constructor(rng) {
     this.rng = rng;
   }
 
   // ── 1. 地形生成 ───────────────────────────────────────────────────
-  /**
-   * 在 map.tiles 中填充所有地形 Tile，完成后自动调用 generateBarrier。
-   * @param {HexMap} map
-   */
   generateTerrain(map) {
-    const { radius } = map;
+    const { radius, rng } = map;
     for (let q = -radius; q <= radius; q++) {
       const r1 = Math.max(-radius, -q - radius);
       const r2 = Math.min(radius, -q + radius);
@@ -63,17 +54,16 @@ export class MapGenerator {
         const roll = this.rng.next();
         if (roll > 0.90) type = TileType.MOUNTAIN;
         else if (roll > 0.82) type = TileType.FOREST;
-        map.tiles.set(`${q},${r}`, new Tile(q, r, type));
+
+        // 传入 rng 保证 variant 随种子确定，地图可复现
+        const tile = new Tile(q, r, type, this.rng);
+        map.setTile(q, r, tile);
       }
     }
     this.generateBarrier(map);
   }
 
   // ── 2. 屏障生成 ───────────────────────────────────────────────────
-  /**
-   * 将最外层 Tile 标记为 BOUNDARY 并设为已揭示。
-   * @param {HexMap} map
-   */
   generateBarrier(map) {
     for (const tile of map.tiles.values()) {
       const dist = Math.max(Math.abs(tile.q), Math.abs(tile.r), Math.abs(tile.q + tile.r));
@@ -85,22 +75,16 @@ export class MapGenerator {
   }
 
   // ── 3. 事件生成 ───────────────────────────────────────────────────
-  /**
-   * 在地图上放置随机事件内容：
-   *   - 内圈（距参考原点 ≤ 4 格）保证 GUARANTEED_EVENTS 各出现一次
-   *   - 其余地块按 ROLL_TABLE 概率随机生成，内圈同类去重
-   * @param {HexMap} map
-   */
   generateEvents(map) {
     const origin = { q: -map.radius, r: map.radius };
     const generatedTypes = new Set();
 
-    // 3a. 内圈保底生成
+    // 3a. 收集内圈 Tile，用无偏 Fisher-Yates 洗牌后保底生成
     const internalTiles = this._collectInternalTiles(map, origin, 4);
-    const shuffled = internalTiles.slice().sort(() => this.rng.next() - 0.5);
+    MapGenerator.shuffle(internalTiles, this.rng);
 
     MapGenerator.GUARANTEED_EVENTS.forEach((eventType, i) => {
-      const tile = shuffled[i];
+      const tile = internalTiles[i];
       if (tile && !tile.content) {
         tile.content = MapGenerator.createContent(eventType);
         generatedTypes.add(MapGenerator.getDedupeKey(tile.content));
@@ -127,12 +111,27 @@ export class MapGenerator {
     }
   }
 
-  // ── 静态工具：概率 → 事件类型 ──────────────────────────────────
+  // ── 静态工具：无偏 Fisher-Yates 洗牌 ────────────────────────────
   /**
-   * 根据 roll 值返回对应事件类型字符串，没有匹配则返回 null。
-   * @param {number} roll  0~1 随机数
-   * @returns {string|null}
+   * 原地洗牌（Fisher-Yates），使用种子 rng，结果无偏。
+   * 替代原有的 .sort(() => rng.next() - 0.5)（有偏，不均匀）。
+   *
+   * @template T
+   * @param {T[]} arr
+   * @param {SeededRandom} rng
+   * @returns {T[]}  原数组（已就地洗牌）
    */
+  static shuffle(arr, rng) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rng.next() * (i + 1));
+      const tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  // ── 静态工具：概率 → 事件类型 ──────────────────────────────────
   static rollEventType(roll) {
     for (const entry of MapGenerator.ROLL_TABLE) {
       if (roll > entry.threshold) return entry.type;
@@ -141,11 +140,6 @@ export class MapGenerator {
   }
 
   // ── 静态工具：事件类型 → 内容对象 ──────────────────────────────
-  /**
-   * 根据事件类型字符串，返回对应的内容对象（tile.content 格式）。
-   * @param {string} eventType
-   * @returns {Object|null}
-   */
   static createContent(eventType) {
     switch (eventType) {
       case 'ALTAR': return makeAltar(1);
@@ -160,38 +154,34 @@ export class MapGenerator {
   }
 
   // ── 静态工具：内容对象 → 去重键 ────────────────────────────────
-  /**
-   * 所有品质的宝藏视为同一类，其余直接用 content.type。
-   * @param {Object|null} content
-   * @returns {string|null}
-   */
   static getDedupeKey(content) {
     if (!content) return null;
     return content.type === TileContentType.TREASURE ? 'treasure' : content.type;
   }
 
-  // ── 私有辅助 ────────────────────────────────────────────────────
-
+  // ── 私有：收集内圈可用 Tile ────────────────────────────────────
   _collectInternalTiles(map, origin, maxDist) {
     const result = [];
     for (const tile of map.tiles.values()) {
-      if (tile.type === TileType.BOUNDARY) continue;
+      if (this._skipTile(tile)) continue;
       if (this._distFromOrigin(tile, origin) <= maxDist) result.push(tile);
     }
     return result;
   }
 
-  _distFromOrigin(tile, origin) {
-    const dq = tile.q - origin.q;
-    const dr = tile.r - origin.r;
-    return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(-dq - dr));
+  /** 不应放置事件的格子 */
+  _skipTile(tile) {
+    return tile.content !== null ||
+      tile.type.moveCost === Infinity ||
+      tile.type === TileType.BOUNDARY;
   }
 
-  /** 山脉、屏障、已有内容的地块跳过随机事件放置 */
-  _skipTile(tile) {
-    return tile.type === TileType.MOUNTAIN
-      || tile.type === TileType.BARRIER
-      || tile.type === TileType.BOUNDARY
-      || tile.content != null;
+  /** 六边形轴坐标曼哈顿距离 */
+  _distFromOrigin(tile, origin) {
+    return Math.max(
+      Math.abs(tile.q - origin.q),
+      Math.abs(tile.r - origin.r),
+      Math.abs((tile.q + tile.r) - (origin.q + origin.r)),
+    );
   }
 }

@@ -4,13 +4,15 @@ import { hexToPixel } from '../world/Tile.js';
 
 export class Renderer {
   static debugMode = false;
+  static selectedKey = null;   // 当前选中格 "q,r" 字符串（由 InputHandler 更新）
 
+  // ── 探索场景渲染 ──────────────────────────────────────────────────
   /**
    * @param {CanvasRenderingContext2D} ctx
-   * @param {object} camera
-   * @param {import('../world/HexMap.js').HexMap} map
-   * @param {import('../entities/Player.js').Player} player
-   * @param {Set<string>|null} [rangeHighlight]  可达格的 "q,r" key 集合
+   * @param {Camera}   camera
+   * @param {HexMap}   map
+   * @param {Player}   player
+   * @param {Set<string>|null} rangeHighlight  可达格 key 集合
    */
   static renderExploration(ctx, camera, map, player, rangeHighlight = null) {
     // 1. 清理背景
@@ -22,8 +24,8 @@ export class Renderer {
       ctx.drawImage(bgImg, 0, 0, ctx.canvas.width, ctx.canvas.height);
     }
 
-    // 2. 绘制瓦片地图
-    map.draw(ctx, camera, this.debugMode);
+    // 2. 绘制地图（内部含视口裁剪，仅渲染可见格子）
+    map.draw(ctx, camera, Renderer.selectedKey, Renderer.debugMode);
 
     // 3. 绘制可移动范围红线轮廓
     if (rangeHighlight && rangeHighlight.size > 0) {
@@ -38,6 +40,7 @@ export class Renderer {
     ctx.restore();
   }
 
+  // ── 战斗场景渲染 ──────────────────────────────────────────────────
   static renderCombat(ctx, heroes, combatManager) {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -57,58 +60,50 @@ export class Renderer {
     }
   }
 
+  // ── 血条 ─────────────────────────────────────────────────────────
   static _drawHealthBar(ctx, unit) {
     const BAR_W = 80, BAR_H = 8;
     const x = unit.x - BAR_W / 2;
     const y = unit.y + 45;
+
     ctx.fillStyle = '#333';
     ctx.fillRect(x, y, BAR_W, BAR_H);
+
     const ratio = Math.max(0, unit.hp / unit.maxHp);
     ctx.fillStyle = unit.type === 'player' ? '#2ecc71' : '#e74c3c';
     ctx.fillRect(x, y, BAR_W * ratio, BAR_H);
+
     ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 1;
     ctx.strokeRect(x, y, BAR_W, BAR_H);
   }
 
-  // ── 可移动范围红线轮廓 ────────────────────────────────────────────
-
+  // ── 可移动范围红线轮廓（呼吸灯）─────────────────────────────────
   /**
-   * 在可达格集合外边缘画一条（或多条）闭合红线轮廓，带呼吸灯效果。
+   * flat-top 六边形顶点（从右侧顺时针编号）：
+   *   V0(1,0)  V1(0.5,+√3/2)  V2(-0.5,+√3/2)
+   *   V3(-1,0) V4(-0.5,-√3/2) V5(0.5,-√3/2)
    *
-   * hexToPixel 使用的是 flat-top（平顶）布局：
-   *   x = size * 3/2 * q
-   *   y = size * (√3/2 * q + √3 * r)
-   *
-   * flat-top 六边形 6 个顶点（从右侧顺时针编号）：
-   *   V0 ( 1,      0    )  右
-   *   V1 ( 0.5,  +√3/2 )  右下
-   *   V2 (-0.5,  +√3/2 )  左下
-   *   V3 (-1,      0    )  左
-   *   V4 (-0.5,  -√3/2 )  左上
-   *   V5 ( 0.5,  -√3/2 )  右上
-   *
-   * 邻格方向 → 与该邻格共享边的两端点：
-   *   [1, 0]  右      → V0-V1
-   *   [1,-1]  右上    → V5-V0
-   *   [0,-1]  左上    → V4-V5
-   *   [-1,0]  左      → V3-V4
-   *   [-1,1]  左下    → V2-V3
-   *   [0, 1]  右下    → V1-V2
+   * 邻格方向 → 共享边的两端顶点：
+   *   [1,0]  右     → V0-V1
+   *   [1,-1] 右上   → V5-V0
+   *   [0,-1] 左上   → V4-V5
+   *   [-1,0] 左     → V3-V4
+   *   [-1,1] 左下   → V2-V3
+   *   [0,1]  右下   → V1-V2
    */
   static drawRangeBorder(ctx, camera, map, reachableSet) {
     const size = map.tileSize;
     const zoom = camera.zoom ?? 1;
-    const SQ3H = Math.sqrt(3) / 2;   // ≈ 0.866
+    const SQ3H = Math.sqrt(3) / 2;
 
-    // flat-top 顶点偏移（相对格心，单位倍数，需乘 size）
     const VERTS = [
-      [1, 0],  // 0 右
-      [0.5, SQ3H],  // 1 右下
-      [-0.5, SQ3H],  // 2 左下
-      [-1, 0],  // 3 左
-      [-0.5, -SQ3H],  // 4 左上
-      [0.5, -SQ3H],  // 5 右上
+      [1, 0],
+      [0.5, SQ3H],
+      [-0.5, SQ3H],
+      [-1, 0],
+      [-0.5, -SQ3H],
+      [0.5, -SQ3H],
     ];
 
     const HEX_DIRS = [
@@ -116,24 +111,14 @@ export class Renderer {
       [-1, 0], [-1, 1], [0, 1],
     ];
 
-    // 邻格方向下标 d → 本格与该邻格共享边的两顶点下标
     const DIR_EDGE = [
-      [0, 1],  // d=0  [1, 0]  右      → V0-V1
-      [5, 0],  // d=1  [1,-1]  右上    → V5-V0
-      [4, 5],  // d=2  [0,-1]  左上    → V4-V5
-      [3, 4],  // d=3  [-1,0]  左      → V3-V4
-      [2, 3],  // d=4  [-1,1]  左下    → V2-V3
-      [1, 2],  // d=5  [0, 1]  右下    → V1-V2
+      [0, 1], [5, 0], [4, 5],
+      [3, 4], [2, 3], [1, 2],
     ];
 
-    // ── Step 1：找出所有"外边"，建立顶点邻接图 ─────────────────────
-    // 用"像素坐标 ×100 取整"做 key，消除浮点误差
     const PREC = 100;
     const vKey = (x, y) => `${Math.round(x * PREC)},${Math.round(y * PREC)}`;
-
-    /** @type {Map<string, [number, number]>} vertKey → 像素坐标 */
     const coords = new Map();
-    /** @type {Map<string, string[]>}         vertKey → 邻接 vertKey[] (最多 2 个) */
     const adj = new Map();
 
     const addEdge = (ax, ay, bx, by) => {
@@ -165,25 +150,21 @@ export class Renderer {
 
     if (adj.size === 0) return;
 
-    // ── Step 2：沿邻接图行走，收集所有闭合环 ────────────────────────
+    // Step 2：沿邻接图收集闭合环
     const visited = new Set();
-    /** @type {Array<Array<[number, number]>>} */
     const loops = [];
 
     for (const startKey of adj.keys()) {
       if (visited.has(startKey)) continue;
-
       const loop = [];
       let cur = startKey;
       let prev = null;
 
       for (let guard = 0; guard < 20000; guard++) {
-        if (cur === startKey && loop.length > 0) break;  // 环闭合
+        if (cur === startKey && loop.length > 0) break;
         if (visited.has(cur)) break;
         visited.add(cur);
         loop.push(coords.get(cur));
-
-        // 选非来路的下一个邻居
         const nbrs = adj.get(cur);
         let next = null;
         for (const nk of nbrs) {
@@ -199,13 +180,12 @@ export class Renderer {
 
     if (loops.length === 0) return;
 
-    // ── Step 3：绘制（呼吸灯） ──────────────────────────────────────
+    // Step 3：绘制（呼吸灯）
     const pulse = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(Date.now() / 300));
 
     ctx.save();
     ctx.translate(Math.round(camera.x), Math.round(camera.y));
     ctx.scale(zoom, zoom);
-
     ctx.strokeStyle = `rgba(255, 55, 55, ${pulse})`;
     ctx.lineWidth = 2.5 / zoom;
     ctx.lineCap = 'round';
