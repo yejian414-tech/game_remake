@@ -3,7 +3,7 @@ import { GameController } from './src/core/GameController.js';
 import { GameState, MapConfig } from './src/core/Constants.js';
 import { GameLoop } from './src/core/GameLoop.js';
 import { HexMap, createMapByPreset } from './src/world/HexMap.js';
-import { makePortal } from './src/world/Tile.js';
+import { makePortal, hexToPixel } from './src/world/Tile.js';  // ← hexToPixel 从 Tile.js 统一导入
 import { Camera } from './src/world/Camera.js';
 import { Player } from './src/entities/Player.js';
 import { DataLoader } from './src/data/DataLoader.js';
@@ -23,14 +23,6 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 resize();
-
-// ── 工具：轴坐标 → 像素中心 ─────────────────────────────────
-function hexToPixel(q, r, size) {
-    return {
-        x: size * (3 / 2 * q),
-        y: size * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
-    };
-}
 
 // ── 启动游戏 ─────────────────────────────────────────────────
 async function init() {
@@ -66,7 +58,7 @@ async function init() {
         }
     };
 
-    // 2. 显示标题页面，点击 START 后进入游戏
+    // 3. 显示标题页面，点击 START 后进入游戏
     const titleScreen = new TitleScreen(() => startGame());
     titleScreen.show();
 }
@@ -83,7 +75,7 @@ function startGame() {
     // 播放地图背景音乐
     window.BGMPlayer.play('resource/music/map.mp3');
 
-    // 初始相机对准左下起始位
+    // 初始相机对准左下起始位（使用从 Tile.js 导入的 hexToPixel）
     const bottomLeft = hexToPixel(-MapConfig.RADIUS, MapConfig.RADIUS, MapConfig.TILE_SIZE);
     camera.x = MapConfig.PADDING - bottomLeft.x;
     camera.y = canvas.height - MapConfig.PADDING - bottomLeft.y;
@@ -141,9 +133,9 @@ function startGame() {
     // 调试模式按钮
     const debugBtn = document.getElementById('debug-toggle-btn');
     debugBtn.addEventListener('click', () => {
-      Renderer.debugMode = !Renderer.debugMode;
-      debugBtn.textContent = Renderer.debugMode ? '🐛 Debug: ON' : '🐛 Debug: OFF';
-      debugBtn.style.background = Renderer.debugMode ? '#27ae60' : '#e67e22';
+        Renderer.debugMode = !Renderer.debugMode;
+        debugBtn.textContent = Renderer.debugMode ? '🐛 Debug: ON' : '🐛 Debug: OFF';
+        debugBtn.style.background = Renderer.debugMode ? '#27ae60' : '#e67e22';
     });
 
     // 启动状态机进入角色选择

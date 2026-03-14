@@ -1,7 +1,7 @@
 // src/core/GameController.js
 import { GameState, MapConfig, TurnConfig, MapPresets } from './Constants.js';
 import { HexMap, createMapByPreset } from '../world/HexMap.js';
-import { TileContentType, makePortal, makeBoss, TileType, makeNPC, makeVillage, makeMerchant, makeRuin, makeCorruptedDeer } from '../world/Tile.js';
+import { TileContentType, makePortal, hexToPixel, makeBoss, TileType, makeNPC, makeVillage, makeMerchant, makeRuin, makeCorruptedDeer } from '../world/Tile.js';
 import { NPC_LIST, VILLAGE_LIST, MERCHANT_LIST, RUIN_LIST, CORRUPTED_DEER_LIST } from '../data/EventTable.js';
 import { StateMachine } from './StateMachine.js';
 import { CombatManager } from './CombatManager.js';
@@ -37,12 +37,7 @@ export class GameController {
     this._setupStates();
   }
 
-  hexToPixel(q, r, size) {
-    return {
-      x: size * (3 / 2 * q),
-      y: size * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
-    };
-  }
+
 
   _setupStates() {
     this.fsm.addState(GameState.CHARACTER_SELECT, {

@@ -18,21 +18,31 @@ export const TileContentType = {
   LIGHTHOUSE: 'lighthouse',
   PORTAL: 'portal',
   NPC: 'npc',
-  VILLAGE: 'village',        // ← 新增
-  MERCHANT: 'merchant',       // ← 新增
-  RUIN: 'ruin',           // ← 新增
-  CORRUPTED_DEER: 'corruptedDeer',  // ← 新增
+  VILLAGE: 'village',
+  MERCHANT: 'merchant',
+  RUIN: 'ruin',
+  CORRUPTED_DEER: 'corruptedDeer',
 };
+
+// ── 共享坐标工具（消除 main.js / GameController.js 里的重复定义）─
+/**
+ * 轴坐标 (q, r) → 画布像素中心
+ * @param {number} q
+ * @param {number} r
+ * @param {number} size  格子半径（像素）
+ * @returns {{ x: number, y: number }}
+ */
+export function hexToPixel(q, r, size) {
+  return {
+    x: size * (3 / 2 * q),
+    y: size * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
+  };
+}
 
 // ── 内容生成器 ───────────────────────────────────────────────
 
 export function makeNPC(name, dialogue = '你好，旅行者！', options = {}) {
-  return {
-    type: TileContentType.NPC,
-    name,
-    dialogue,
-    ...options,
-  };
+  return { type: TileContentType.NPC, name, dialogue, ...options };
 }
 
 export function makePortal(targetMap, targetQ, targetR) {
@@ -61,57 +71,47 @@ export function makeLighthouse(level = 1) {
 }
 
 export function makeVillage(name = '村庄') {
-  return {
-    type: TileContentType.VILLAGE,   // ← 改为常量
-    name,
-    dialogue: '欢迎来到村庄。',
-    iconType: 'greenCircle',
-  };
+  return { type: TileContentType.VILLAGE, name, dialogue: '欢迎来到村庄。', iconType: 'greenCircle' };
 }
 
 export function makeMerchant(name = '旅商') {
-  return {
-    type: TileContentType.MERCHANT,  // ← 改为常量
-    name,
-    iconType: 'blueCircle',
-  };
+  return { type: TileContentType.MERCHANT, name, iconType: 'blueCircle' };
 }
 
 export function makeRuin(name = '古代遗迹入口', enemyName = '腐化守卫') {
-  return {
-    type: TileContentType.RUIN,      // ← 改为常量
-    name,
-    enemyName,
-    iconType: 'purpleCircle',
-  };
+  return { type: TileContentType.RUIN, name, enemyName, iconType: 'purpleCircle' };
 }
 
 export function makeCorruptedDeer(name = '被腐化的鹿') {
-  return {
-    type: TileContentType.CORRUPTED_DEER, // ← 改为常量
-    name,
-    iconType: 'blackCircle',
-  };
+  return { type: TileContentType.CORRUPTED_DEER, name, iconType: 'blackCircle' };
 }
 
 // ── Tile 类 ──────────────────────────────────────────────────
 
 export class Tile {
+  // 提升为静态属性，避免每次 draw() 都重建数组
+  static TERRAIN_KEYS = ['grass', 'forest', 'mountain', 'barrier', 'boundary'];
+
+  // 圆圈图标颜色映射，同理提升为静态属性
+  static CIRCLE_COLOR_MAP = {
+    redCircle: 'red',
+    greenCircle: 'green',
+    blueCircle: 'blue',
+    purpleCircle: 'purple',
+    blackCircle: 'black',
+  };
+
   constructor(q, r, type = TileType.GRASS) {
     this.q = q;
     this.r = r;
     this.type = type;
     this.content = null;
     this.isRevealed = false;
-    // 随机选择一个变体 (1-4)
     this.variant = Math.floor(Math.random() * 4) + 1;
   }
 
   getCanvasPos(size) {
-    return {
-      x: size * (3 / 2 * this.q),
-      y: size * (Math.sqrt(3) / 2 * this.q + Math.sqrt(3) * this.r),
-    };
+    return hexToPixel(this.q, this.r, size);
   }
 
   draw(ctx, size, isSelected = false, visState = 'visible', debugMode = false) {
@@ -128,7 +128,7 @@ export class Tile {
       ctx.closePath();
     };
 
-    // 1. 处理战争迷雾 (完全未探索)
+    // 1. 战争迷雾（完全未探索）
     if (visState === 'hidden') {
       hexPath();
       ctx.fillStyle = '#0a0a14';
@@ -148,10 +148,8 @@ export class Tile {
     const imgW = size * 2;
     const imgH = size * Math.sqrt(3);
 
-    // 2. 绘制地形图片
-    const TERRAIN_KEYS = ['grass', 'forest', 'mountain', 'barrier', 'boundary'];
-    const terrainKey = `${TERRAIN_KEYS[this.type.id] ?? 'grass'}_${this.variant}`;
-
+    // 2. 地形图片
+    const terrainKey = `${Tile.TERRAIN_KEYS[this.type.id] ?? 'grass'}_${this.variant}`;
     const terrainImg = DataLoader.getImage(terrainKey);
     if (terrainImg) {
       const bleed = 0.5;
@@ -164,20 +162,11 @@ export class Tile {
       );
     }
 
-    // 3. 绘制内容图片 (Dungeon, Boss, NPC 等图标)
+    // 3. 内容图标
     if (this.content && visState === 'visible') {
-      const iconType = this.content.iconType;
-
-      // 圆圈图标（village / merchant / ruin / corruptedDeer / NPC 等）
+      const { iconType } = this.content;
       if (iconType) {
-        const CIRCLE_COLOR_MAP = {
-          redCircle: 'red',
-          greenCircle: 'green',
-          blueCircle: 'blue',
-          purpleCircle: 'purple',
-          blackCircle: 'black',
-        };
-        const color = CIRCLE_COLOR_MAP[iconType];
+        const color = Tile.CIRCLE_COLOR_MAP[iconType];
         if (color) {
           ctx.save();
           ctx.beginPath();
@@ -195,7 +184,6 @@ export class Tile {
           ctx.restore();
         }
       } else {
-        // 图片图标（dungeon / boss / treasure 等）
         const contentImg = DataLoader.getImage(this.content.type);
         if (contentImg) {
           const scale = 0.92;
@@ -206,7 +194,7 @@ export class Tile {
       }
     }
 
-    // 4. 绘制选中边框
+    // 4. 选中边框
     if (isSelected) {
       hexPath();
       ctx.strokeStyle = 'white';
@@ -214,14 +202,14 @@ export class Tile {
       ctx.stroke();
     }
 
-    // 5. 已探索但视野外：叠半透明暗色蒙版
+    // 5. 已探索但视野外：半透明暗色蒙版
     if (visState === 'explored') {
       hexPath();
       ctx.fillStyle = 'rgba(10, 10, 20, 0.55)';
       ctx.fill();
     }
 
-    // 6. debug 模式下显示坐标
+    // 6. Debug 坐标
     if (debugMode && visState !== 'hidden') {
       ctx.save();
       ctx.font = `${Math.floor(size * 0.45)}px monospace`;

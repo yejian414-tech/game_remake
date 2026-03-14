@@ -21,31 +21,22 @@ import {
  *   gen.generateEvents(map);
  *
  * 静态工具方法可独立使用：
- *   MapGenerator.rollEventType(roll, zone)  → 事件类型字符串
- *   MapGenerator.createContent(eventType)   → tile.content 对象
- *   MapGenerator.getDedupeKey(content)      → 去重键字符串
+ *   MapGenerator.rollEventType(roll)   → 事件类型字符串
+ *   MapGenerator.createContent(type)   → tile.content 对象
+ *   MapGenerator.getDedupeKey(content) → 去重键字符串
  */
 export class MapGenerator {
 
   // ── 概率表（从高到低依次匹配，roll > threshold 则命中）──────────
-  static ROLL_TABLE = {
-    OUTSIDE_BARRIER: [
-      { threshold: 0.975, type: 'ALTAR' },
-      { threshold: 0.950, type: 'DUNGEON' },
-      { threshold: 0.910, type: 'TREASURE_EPIC' },
-      { threshold: 0.900, type: 'TREASURE_RARE' },
-      { threshold: 0.880, type: 'TREASURE_COMMON' },
-      { threshold: 0.850, type: 'LIGHTHOUSE' },
-    ],
-    INSIDE_BARRIER: [
-      { threshold: 0.975, type: 'ALTAR' },
-      { threshold: 0.950, type: 'DUNGEON' },
-      { threshold: 0.910, type: 'TREASURE_EPIC' },
-      { threshold: 0.900, type: 'TREASURE_RARE' },
-      { threshold: 0.880, type: 'TREASURE_COMMON' },
-      { threshold: 0.850, type: 'LIGHTHOUSE' },
-    ],
-  };
+  // 内圈与外圈当前使用同一套概率，若将来需要差异化再拆为两张表。
+  static ROLL_TABLE = [
+    { threshold: 0.975, type: 'ALTAR' },
+    { threshold: 0.950, type: 'DUNGEON' },
+    { threshold: 0.910, type: 'TREASURE_EPIC' },
+    { threshold: 0.900, type: 'TREASURE_RARE' },
+    { threshold: 0.880, type: 'TREASURE_COMMON' },
+    { threshold: 0.850, type: 'LIGHTHOUSE' },
+  ];
 
   // 内圈必出的事件类型（顺序即优先级）
   static GUARANTEED_EVENTS = ['ALTAR', 'DUNGEON', 'TREASURE_COMMON', 'LIGHTHOUSE'];
@@ -70,7 +61,7 @@ export class MapGenerator {
       for (let r = r1; r <= r2; r++) {
         let type = TileType.GRASS;
         const roll = this.rng.next();
-        if (roll > 0.90)      type = TileType.MOUNTAIN;
+        if (roll > 0.90) type = TileType.MOUNTAIN;
         else if (roll > 0.82) type = TileType.FOREST;
         map.tiles.set(`${q},${r}`, new Tile(q, r, type));
       }
@@ -121,12 +112,12 @@ export class MapGenerator {
       if (this._skipTile(tile)) continue;
 
       const dist = this._distFromOrigin(tile, origin);
-      const zone = dist > 4 ? 'OUTSIDE_BARRIER' : 'INSIDE_BARRIER';
-      const eventType = MapGenerator.rollEventType(this.rng.next(), zone);
+      const isInside = dist <= 4;
+      const eventType = MapGenerator.rollEventType(this.rng.next());
       if (!eventType) continue;
 
       // 内圈同类去重
-      if (zone === 'INSIDE_BARRIER') {
+      if (isInside) {
         const key = MapGenerator.getDedupeKey(MapGenerator.createContent(eventType));
         if (generatedTypes.has(key)) continue;
         generatedTypes.add(key);
@@ -138,14 +129,12 @@ export class MapGenerator {
 
   // ── 静态工具：概率 → 事件类型 ──────────────────────────────────
   /**
-   * 根据 roll 值和区域，返回对应事件类型字符串，没有匹配则返回 null。
-   * @param {number} roll   0~1 随机数
-   * @param {string} zone   'INSIDE_BARRIER' | 'OUTSIDE_BARRIER'
+   * 根据 roll 值返回对应事件类型字符串，没有匹配则返回 null。
+   * @param {number} roll  0~1 随机数
    * @returns {string|null}
    */
-  static rollEventType(roll, zone = 'OUTSIDE_BARRIER') {
-    const table = MapGenerator.ROLL_TABLE[zone] ?? MapGenerator.ROLL_TABLE.OUTSIDE_BARRIER;
-    for (const entry of table) {
+  static rollEventType(roll) {
+    for (const entry of MapGenerator.ROLL_TABLE) {
       if (roll > entry.threshold) return entry.type;
     }
     return null;
@@ -159,14 +148,14 @@ export class MapGenerator {
    */
   static createContent(eventType) {
     switch (eventType) {
-      case 'ALTAR':           return makeAltar(1);
-      case 'DUNGEON':         return makeDungeon('Dungeon', 1);
-      case 'TREASURE_EPIC':   return makeTreasure(3);
-      case 'TREASURE_RARE':   return makeTreasure(2);
+      case 'ALTAR': return makeAltar(1);
+      case 'DUNGEON': return makeDungeon('Dungeon', 1);
+      case 'TREASURE_EPIC': return makeTreasure(3);
+      case 'TREASURE_RARE': return makeTreasure(2);
       case 'TREASURE_COMMON': return makeTreasure(1);
-      case 'LIGHTHOUSE':      return makeLighthouse(1);
-      case 'NPC':             return makeNPC('Villager', 'Welcome, traveler!');
-      default:                return null;
+      case 'LIGHTHOUSE': return makeLighthouse(1);
+      case 'NPC': return makeNPC('Villager', 'Welcome, traveler!');
+      default: return null;
     }
   }
 
@@ -182,10 +171,11 @@ export class MapGenerator {
   }
 
   // ── 私有辅助 ────────────────────────────────────────────────────
+
   _collectInternalTiles(map, origin, maxDist) {
     const result = [];
     for (const tile of map.tiles.values()) {
-      if (tile.type.id === 3) continue; // 跳过屏障
+      if (tile.type === TileType.BOUNDARY) continue;
       if (this._distFromOrigin(tile, origin) <= maxDist) result.push(tile);
     }
     return result;
@@ -199,8 +189,9 @@ export class MapGenerator {
 
   /** 山脉、屏障、已有内容的地块跳过随机事件放置 */
   _skipTile(tile) {
-    return tile.type.id === 2    // MOUNTAIN
-        || tile.type.id === 3    // BARRIER
-        || tile.content != null;
+    return tile.type === TileType.MOUNTAIN
+      || tile.type === TileType.BARRIER
+      || tile.type === TileType.BOUNDARY
+      || tile.content != null;
   }
 }
