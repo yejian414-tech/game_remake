@@ -13,7 +13,7 @@ import { Renderer } from '../rendering/Renderer.js';
 import { rollRandomItem } from '../data/items.js';
 import { GameStory } from './GameStory.js';
 import { EventTable } from '../data/EventTable.js';
-import { findPath } from '../utils/Pathfinder.js';   // ← 新增：A* 寻路
+import { findPath, getReachableTiles } from '../utils/Pathfinder.js';   // ← 新增：A* 寻路
 
 export class GameController {
   constructor(map, player, ui, camera) {
@@ -34,6 +34,7 @@ export class GameController {
     this.currentMissionName = null;
     this.merchantEncountered = false;
     this._isMoving = false;   // ← 新增：路径动画锁，移动中屏蔽新点击
+    this.rangeHighlight = null;
     this.gameStory = new GameStory(ui);
     this.fsm = new StateMachine(GameState.INITIALIZING);
     this._setupStates();
@@ -188,13 +189,14 @@ export class GameController {
   render(ctx, camera) {
     if (this.fsm.currentState === GameState.MAP_EXPLORATION) {
       const currentMap = this.currentMapName === '新手村' ? this.noviceVillage : this.map;
-      Renderer.renderExploration(ctx, camera, currentMap, this.player);
+      Renderer.renderExploration(ctx, camera, currentMap, this.player, this.rangeHighlight);
     } else if (this.fsm.currentState === GameState.COMBAT) {
       Renderer.renderCombat(ctx, this.selectedHeroes, this.combatManager);
     }
   }
 
   _startTurn() {
+    this.rangeHighlight = null;
     this.turnCount += 1;
     this.ui.updateProgressBar(this.turnCount, this.currentMaxTurns);
 
@@ -285,7 +287,21 @@ export class GameController {
     );
 
     // 不可达 / 移动力不足 → 忽略
-    if (!result || result.path.length === 0) return;
+    if (!result || result.path.length === 0) {
+      // 判断目标格在无限移动力下是否可达（即：地形可通行但步数不足）
+      const canReachUnlimited = findPath(curMap, this.player.q, this.player.r, q, r, Infinity);
+      if (canReachUnlimited) {
+        // 步数不足：展示可移动范围红线
+        this.rangeHighlight = getReachableTiles(
+          curMap,
+          this.player.q,
+          this.player.r,
+          this.player.movementPoints,
+        );
+      }
+      return;
+    }
+    this._walkPath(result.path, curMap);
 
     this._walkPath(result.path, curMap);
   }
@@ -299,6 +315,7 @@ export class GameController {
    */
   _walkPath(path, curMap) {
     this._isMoving = true;
+    this.rangeHighlight = null;
     let stepIndex = 0;
 
     const doStep = () => {
