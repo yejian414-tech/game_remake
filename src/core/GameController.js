@@ -66,6 +66,12 @@ export class GameController {
         const noviceQ = -MapPresets.novice.radius + 1;
         const noviceR = MapPresets.novice.radius - 1;
 
+        // ── 强制出生格为草地，防止随机地形导致无法行走 ──────────────
+        const mainSpawnTile = this.map.getTile(mainQ, mainR);
+        if (mainSpawnTile) mainSpawnTile.type = TileType.GRASS;
+        const noviceSpawnTile = this.noviceVillage.getTile(noviceQ, noviceR);
+        if (noviceSpawnTile) noviceSpawnTile.type = TileType.GRASS;
+
         // 双向传送阵
         this.map.placeContent(mainQ, mainR, makePortal('新手村', noviceQ, noviceR), 0);
         this.noviceVillage.placeContent(noviceQ, noviceR, makePortal('主地图', mainQ, mainR), 0);
@@ -303,7 +309,6 @@ export class GameController {
     }
     this._walkPath(result.path, curMap);
 
-    this._walkPath(result.path, curMap);
   }
 
   /**
