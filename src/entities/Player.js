@@ -25,6 +25,10 @@ export class Player extends Character {
 
     // 背包（不限格，存放未装备的道具）
     this.inventory = [];
+    this.baseStrength = this.strength;
+    this.baseToughness = this.toughness;
+    this.baseAgility = this.agility;
+    this.baseIntellect = this.intellect;
   }
 
   // ── 技能槽操作 ───────────────────────────────────────────
