@@ -236,4 +236,63 @@ export class UIManager {
     this.els.storyScreen.style.display = 'none';
   }
   showChestReward(item, onClose) { ChestAnimation.play(item, onClose ?? (() => {})); }
+  // src/ui/UIManager.js  — PATCH: updated updateCombatUI method
+  // Replace the existing updateCombatUI method in your UIManager with this version.
+  // Everything else in UIManager stays the same.
+
+  // ─── updateCombatUI (replace existing method) ────────────────────────────────
+  updateCombatUI(combatManager) {
+    if (!combatManager || !window.renderCombatUI) return;
+    this.inventoryUI?.update(combatManager.heroes);
+
+    const buildHeroSnapshot = (h) => ({
+      ...h,
+      // Expose weapon data for the UI
+      weaponSlots: (h.weaponSlots || []).map(w => w ? { ...w } : null),
+      equippedWeaponIndex: h.equippedWeaponIndex ?? 0,
+      // Skills come from the active weapon
+      skills: h.weaponSlots
+        ? (h.weaponSlots[h.equippedWeaponIndex ?? 0]?.skills || [])
+        : (h.skillSlots || []).filter(Boolean),
+    });
+
+    const stateSnapshot = {
+      heroes:     combatManager.heroes.map(buildHeroSnapshot),
+      enemies:    [...combatManager.enemies],
+      phase:      combatManager.phase,
+      activeUnit: combatManager.activeUnit
+        ? buildHeroSnapshot(combatManager.activeUnit)
+        : null,
+      turnOrder: [combatManager.activeUnit, ...combatManager.turnOrder]
+        .filter(Boolean)
+        .map(u => ({ id: u.id, type: u.type, name: u.name })),
+      logs:     [...combatManager.logs],
+      diceInfo: combatManager.diceInfo,
+    };
+
+    const callbacks = {
+      onStartBattle: () => {
+        if (combatManager.startGame) combatManager.startGame();
+        else { combatManager.phase = 'PLAYER_TURN'; }
+        this.updateCombatUI(combatManager);
+      },
+      onSkillSelect:  (skill) => combatManager.selectSkill(skill),
+      onTargetSelect: (targetId) => combatManager.executePlayerAction(targetId),
+      onRollComplete: () => combatManager.applyDamage(),
+      onExecuteComplete: () => combatManager.evaluateTurn(),
+      onFinishCombat: () => this.onCombatResult(combatManager.phase === 'WIN' ? 'win' : 'lose'),
+
+      // New: weapon switching from the bottom panel
+      onSwitchWeapon: (heroSnapshot, weaponIndex) => {
+        // Find the real hero object (not the snapshot)
+        const realHero = combatManager.heroes.find(h => h.id === heroSnapshot.id);
+        if (realHero) {
+          combatManager.switchHeroWeapon(realHero, weaponIndex);
+          this.updateCombatUI(combatManager);
+        }
+      },
+    };
+
+    window.renderCombatUI('react-combat-root', stateSnapshot, callbacks);
+  }
 }

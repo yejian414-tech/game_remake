@@ -437,27 +437,53 @@ export class GameController {
     }
   }
 
+// ── Hero creation — supports new weapon slots and legacy skill slots ──────
   _createHeroFromData(data) {
     const hero = new Player(data.name);
     hero.id = data.id;
-    hero.maxHp = data.maxHp ?? data.hp;
-    hero.hp = data.hp;
+    hero.maxHp = data.maxHp ?? data.hp ?? 100;
+    hero.hp = hero.maxHp;
     hero.type = 'player';
+
+    // Six core stats (vitality replaces toughness; falls back for legacy data)
     if (data.stats) {
       const s = data.stats;
-      hero.strength = s.strength ?? hero.strength;
-      hero.toughness = s.toughness ?? hero.toughness;
-      hero.agility = s.agility ?? hero.agility;
+      hero.strength  = s.strength  ?? hero.strength;
+      hero.vitality  = s.vitality  ?? s.toughness ?? hero.vitality;
       hero.intellect = s.intellect ?? hero.intellect;
+      hero.awareness = s.awareness ?? hero.awareness;
+      hero.talent    = s.talent    ?? hero.talent;
+      hero.agility   = s.agility   ?? hero.agility;
     }
-    if (data.skillSlots) {
+
+    // Store base values so refreshDerivedStats can reset cleanly on weapon swap
+    hero._baseStrength  = hero.strength;
+    hero._baseVitality  = hero.vitality;
+    hero._baseAgility   = hero.agility;
+    hero._baseIntellect = hero.intellect;
+    hero._baseAwareness = hero.awareness;
+    hero._baseTalent    = hero.talent;
+
+    // New weapon slots system
+    if (data.weaponSlots && Array.isArray(data.weaponSlots)) {
+      hero.weaponSlots = [null, null];
+      data.weaponSlots.forEach((weaponId, i) => {
+        if (weaponId) {
+          const weapon = DataLoader.getWeapon?.(weaponId);
+          if (weapon) hero.weaponSlots[i] = weapon;
+        }
+      });
+      hero.equippedWeaponIndex = data.equippedWeaponIndex ?? 0;
+    } else if (data.skillSlots) {
+      // Legacy fallback: load old-style skill slots
       data.skillSlots.forEach((sid, i) => {
         if (sid) {
           const skill = DataLoader.getSkill(sid);
-          if (skill) hero.equipSkill(skill, i);
+          if (skill) hero.equipSkill?.(skill, i);
         }
       });
     }
+
     hero.refreshDerivedStats();
     return hero;
   }
