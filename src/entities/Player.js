@@ -162,21 +162,77 @@ export class Player extends Character {
 
   // ── Drawing ─────────────────────────────────────────────────────
 
-  draw(ctx, size) {
-    ctx.save();
-    const heroImg = DataLoader.getImage('hero');
-    const time = Date.now() / 300;
-    const pulse = Math.sin(time) * 0.2 + 1.0;
 
-    if (heroImg) {
-      ctx.globalAlpha = 0.9;
-      ctx.drawImage(heroImg, this.x - size * pulse / 2, this.y - size * pulse / 2, size * pulse, size * pulse);
-    } else {
-      ctx.fillStyle = '#4a90d9';
+
+    draw(ctx, size) {
+      ctx.save();
+      const heroImg = DataLoader.getImage('hero');
+
+      // 1. 创建呼吸灯动画因子 (基于时间)
+      // 产生一个在 0.8 到 1.2 之间循环的数值
+      const time = Date.now() / 300;
+      const pulse = Math.sin(time) * 0.2 + 1.0;
+
+      // 2. 绘制脚底强化光环 (Aura)
+      // 在绘制图像之前画，确保光环在人物“脚下”
+      const auraRadius = size * 1 * pulse; // 光环半径随呼吸灯变化
+      const gradient = ctx.createRadialGradient(
+          this.x, this.y, 0,           // 内圈中心
+          this.x, this.y, auraRadius   // 外圈边缘
+      );
+
+      // 金色渐变：中心较实，边缘透明
+      gradient.addColorStop(0, 'rgba(0, 191, 255, 0.7)');   // 中心：深天蓝 (DeepSkyBlue)
+      gradient.addColorStop(0.5, 'rgba(0, 191, 255, 0.3)'); // 中间过渡
+      gradient.addColorStop(1, 'rgba(0, 191, 255, 0)');
+
       ctx.beginPath();
-      ctx.arc(this.x, this.y, (size / 2) * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.arc(this.x, this.y, auraRadius, 0, Math.PI * 2);
       ctx.fill();
-    }
-    ctx.restore();
+
+      // 3. 绘制角色图像
+      // 保留基本的 shadowBlur 增加人物厚度感
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+
+      if (heroImg) {
+          const drawW = size * 0.9;
+          const drawH = (heroImg.height / heroImg.width) * drawW;
+
+          // 人物绘制
+          ctx.drawImage(heroImg, this.x - drawW / 2, this.y - drawH * 0.8, drawW, drawH);
+
+          // 4. 绘制文字 (Leader) - 位置进一步下移并强化样式
+          ctx.shadowBlur = 0; // 关闭文字阴影防止模糊
+
+          const textY = this.y + 25; // 坐标进一步下移
+
+          ctx.font = 'bold 13px "Arial Black", Gadget, sans-serif';
+          ctx.textAlign = 'center';
+
+          // 绘制加粗描边，增加对比度
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+          ctx.lineWidth = 4;
+          ctx.strokeText(this.name, this.x, textY);
+
+          // 填充颜色
+          ctx.fillStyle = '#f1c40f'; // 使用醒目的明黄色
+          ctx.fillText(this.name, this.x, textY);
+
+      } else {
+          // 兜底逻辑
+          ctx.fillStyle = '#f1c40f';
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, 10, 0, Math.PI*2);
+          ctx.fill();
+
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = 'white';
+          ctx.textAlign = 'center';
+          ctx.fillText(this.name, this.x, this.y + 35);
+      }
+
+      ctx.restore();
   }
-}
+  }
