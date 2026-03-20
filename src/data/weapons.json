@@ -1,0 +1,247 @@
+{
+  "weapons": [
+    {
+      "id": "iron_sword",
+      "name": "Iron Sword",
+      "type": "blade",
+      "rarity": "common",
+      "statBonus": { "strength": 8 },
+      "skills": [
+        {
+          "id": "slash",
+          "name": "Slash",
+          "type": "attack",
+          "target": "single",
+          "power": 120,
+          "cooldown": 0,
+          "desc": "120% STR physical damage",
+          "statKey": "strength"
+        },
+        {
+          "id": "heavy_strike",
+          "name": "Heavy Strike",
+          "type": "attack",
+          "target": "single",
+          "power": 180,
+          "cooldown": 2,
+          "desc": "180% STR, chance to stun",
+          "statKey": "strength"
+        }
+      ]
+    },
+    {
+      "id": "great_axe",
+      "name": "Great Axe",
+      "type": "axe",
+      "rarity": "common",
+      "statBonus": { "strength": 14 },
+      "skills": [
+        {
+          "id": "chop",
+          "name": "Chop",
+          "type": "attack",
+          "target": "single",
+          "power": 130,
+          "cooldown": 0,
+          "desc": "130% STR cleave",
+          "statKey": "strength"
+        },
+        {
+          "id": "heavy_cleave",
+          "name": "Heavy Cleave",
+          "type": "attack",
+          "target": "aoe",
+          "power": 100,
+          "cooldown": 3,
+          "desc": "100% STR to all enemies",
+          "statKey": "strength"
+        },
+        {
+          "id": "armor_smash",
+          "name": "Armor Smash",
+          "type": "attack",
+          "target": "single",
+          "power": 140,
+          "cooldown": 2,
+          "desc": "Reduces enemy defense",
+          "statKey": "strength"
+        }
+      ]
+    },
+    {
+      "id": "ice_rod",
+      "name": "Ice Rod",
+      "type": "wand",
+      "rarity": "uncommon",
+      "statBonus": { "intellect": 16 },
+      "skills": [
+        {
+          "id": "ice_bolt",
+          "name": "Ice Bolt",
+          "type": "magic",
+          "target": "single",
+          "power": 130,
+          "cooldown": 0,
+          "desc": "130% INT ice damage",
+          "statKey": "intellect"
+        },
+        {
+          "id": "ice_shock",
+          "name": "Ice Shock",
+          "type": "magic",
+          "target": "single",
+          "power": 110,
+          "cooldown": 1,
+          "desc": "110% INT + slows target",
+          "statKey": "intellect"
+        },
+        {
+          "id": "armor_regen",
+          "name": "Armor Regen",
+          "type": "buff",
+          "target": "self",
+          "power": 60,
+          "cooldown": 3,
+          "desc": "Restore 60% INT as HP",
+          "statKey": "vitality"
+        }
+      ]
+    },
+    {
+      "id": "magic_staff",
+      "name": "Magic Staff",
+      "type": "staff",
+      "rarity": "uncommon",
+      "statBonus": { "intellect": 12, "talent": 6 },
+      "skills": [
+        {
+          "id": "arcane_snap",
+          "name": "Arcane Snap",
+          "type": "magic",
+          "target": "single",
+          "power": 110,
+          "cooldown": 0,
+          "desc": "110% INT arcane hit",
+          "statKey": "intellect"
+        },
+        {
+          "id": "lightning_rune",
+          "name": "Lightning Rune",
+          "type": "magic",
+          "target": "single",
+          "power": 160,
+          "cooldown": 2,
+          "desc": "160% INT lightning",
+          "statKey": "intellect"
+        },
+        {
+          "id": "pull",
+          "name": "Pull",
+          "type": "debuff",
+          "target": "single",
+          "power": 80,
+          "cooldown": 2,
+          "desc": "80% INT + disrupts target",
+          "statKey": "intellect"
+        }
+      ]
+    },
+    {
+      "id": "wand_of_flames",
+      "name": "Wand of Flames",
+      "type": "wand",
+      "rarity": "uncommon",
+      "statBonus": { "intellect": 14, "talent": 8 },
+      "skills": [
+        {
+          "id": "flame_bolt",
+          "name": "Flame Bolt",
+          "type": "magic",
+          "target": "single",
+          "power": 140,
+          "cooldown": 0,
+          "desc": "140% INT fire damage",
+          "statKey": "intellect"
+        },
+        {
+          "id": "rask_cluster",
+          "name": "Rask Cluster",
+          "type": "magic",
+          "target": "aoe",
+          "power": 110,
+          "cooldown": 3,
+          "desc": "110% INT to all enemies",
+          "statKey": "intellect"
+        },
+        {
+          "id": "firestorm",
+          "name": "Firestorm",
+          "type": "magic",
+          "target": "aoe",
+          "power": 160,
+          "cooldown": 4,
+          "desc": "160% INT devastating fire AOE",
+          "statKey": "intellect"
+        }
+      ]
+    },
+    {
+      "id": "longbow",
+      "name": "Longbow",
+      "type": "bow",
+      "rarity": "common",
+      "statBonus": { "awareness": 10 },
+      "skills": [
+        {
+          "id": "arrow_shot",
+          "name": "Arrow Shot",
+          "type": "attack",
+          "target": "single",
+          "power": 120,
+          "cooldown": 0,
+          "desc": "120% AWR ranged shot",
+          "statKey": "awareness"
+        },
+        {
+          "id": "piercing_arrow",
+          "name": "Piercing Arrow",
+          "type": "attack",
+          "target": "single",
+          "power": 160,
+          "cooldown": 2,
+          "desc": "160% AWR ignores armor",
+          "statKey": "awareness"
+        }
+      ]
+    },
+    {
+      "id": "daggers",
+      "name": "Twin Daggers",
+      "type": "blade",
+      "rarity": "common",
+      "statBonus": { "agility": 10, "talent": 4 },
+      "skills": [
+        {
+          "id": "backstab",
+          "name": "Backstab",
+          "type": "attack",
+          "target": "single",
+          "power": 200,
+          "cooldown": 3,
+          "desc": "200% TAL crit damage",
+          "statKey": "talent"
+        },
+        {
+          "id": "quick_slash",
+          "name": "Quick Slash",
+          "type": "attack",
+          "target": "single",
+          "power": 110,
+          "cooldown": 0,
+          "desc": "110% AGI fast strike",
+          "statKey": "agility"
+        }
+      ]
+    }
+  ]
+}

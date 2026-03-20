@@ -6,8 +6,16 @@
       "hp": 140,
       "maxHp": 140,
       "desc": "High HP, melee expert, impenetrable defense",
-      "stats": { "strength": 22, "toughness": 20, "intellect": 6, "awareness": 10, "talent": 8, "agility": 10 },
-      "skillSlots": ["slash", "shield_bash", null, null],
+      "stats": {
+        "strength": 22,
+        "vitality": 20,
+        "intellect": 6,
+        "awareness": 10,
+        "talent": 8,
+        "agility": 10
+      },
+      "weaponSlots": ["iron_sword", "great_axe"],
+      "equippedWeaponIndex": 0,
       "equipSlots": [null, null]
     },
     {
@@ -16,8 +24,16 @@
       "hp": 80,
       "maxHp": 80,
       "desc": "Low HP, high magic damage, AOE spells",
-      "stats": { "strength": 6, "toughness": 6, "intellect": 28, "awareness": 18, "talent": 20, "agility": 10 },
-      "skillSlots": ["fireball", "frost_nova", null, null],
+      "stats": {
+        "strength": 6,
+        "vitality": 6,
+        "intellect": 28,
+        "awareness": 18,
+        "talent": 20,
+        "agility": 10
+      },
+      "weaponSlots": ["ice_rod", "wand_of_flames"],
+      "equippedWeaponIndex": 0,
       "equipSlots": [null, null]
     },
     {
@@ -26,8 +42,16 @@
       "hp": 100,
       "maxHp": 100,
       "desc": "Balanced, ranged expert, high awareness",
-      "stats": { "strength": 14, "toughness": 12, "intellect": 10, "awareness": 20, "talent": 12, "agility": 18 },
-      "skillSlots": ["arrow_shot", "evasion", null, null],
+      "stats": {
+        "strength": 14,
+        "vitality": 12,
+        "intellect": 10,
+        "awareness": 20,
+        "talent": 12,
+        "agility": 18
+      },
+      "weaponSlots": ["longbow", "daggers"],
+      "equippedWeaponIndex": 0,
       "equipSlots": [null, null]
     },
     {
@@ -36,8 +60,16 @@
       "hp": 90,
       "maxHp": 90,
       "desc": "Highest speed, high crit rate, ambush specialist",
-      "stats": { "strength": 16, "toughness": 8, "intellect": 8, "awareness": 16, "talent": 14, "agility": 24 },
-      "skillSlots": ["backstab", "evasion", null, null],
+      "stats": {
+        "strength": 16,
+        "vitality": 8,
+        "intellect": 8,
+        "awareness": 16,
+        "talent": 14,
+        "agility": 24
+      },
+      "weaponSlots": ["daggers", "longbow"],
+      "equippedWeaponIndex": 0,
       "equipSlots": [null, null]
     }
   ]

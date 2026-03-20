@@ -1,27 +1,27 @@
-// game/src/entities/Character.js
+// src/entities/Character.js
 export class Character {
   constructor(name, hp, maxHp) {
     this.name = name;
     this.hp = hp;
     this.maxHp = maxHp;
 
-    // ── 六维基础属性 ─────────────────────────────────────────
-    /** 力量 STR：物理伤害、负重 */
+    // ── Six Core Stats (aligned with game design doc) ──────────────
+    /** Strength STR: Accuracy & damage with bladed/blunt weapons, physical challenges */
     this.strength = 10;
-    /** 韧性 TOU：物理防御、HP 加成 */
-    this.toughness = 10;
-    /** 智力 INT：魔法伤害、技能效果 */
+    /** Vitality VIT: Drives base HP, stamina challenges */
+    this.vitality = 10;
+    /** Intelligence INT: Accuracy & damage with wands/staves, puzzle solving */
     this.intellect = 10;
-    /** 意识 AWR：先手判定、侦察、抗控 */
+    /** Awareness AWR: Accuracy with bows/polearms, ambush launch/prevention */
     this.awareness = 10;
-    /** 才艺 TAL：特殊技能、光环、辅助 */
+    /** Talent TAL: Accuracy with certain weapons, boat movement, trap disarming */
     this.talent = 10;
-    /** 敏捷 AGI：速度、闪避、暴击率 */
+    /** Agility AGI: Speed, evasion, crit rate */
     this.agility = 10;
 
-    // 派生属性（由六维映射，随时可通过 refreshDerivedStats 刷新）
-    this.attack = this.strength;   // 向下兼容 Dice / CombatManager
-    this.defense = this.toughness;
+    // Derived combat stats (refreshed via refreshDerivedStats)
+    this.attack = this.strength;   // backward compat with Dice / CombatManager
+    this.defense = this.vitality;
     this.speed = this.agility;
 
     this.type = 'neutral';
@@ -31,16 +31,22 @@ export class Character {
   }
 
   /**
-   * 根据六维属性刷新派生值。
-   * 在实例化/装备变动/增益结算后调用一次即可。
+   * Recalculate derived stats from the six core stats.
+   * Call after equipping/unequipping weapons or applying buffs.
+   *
+   * Derivation rules:
+   *   attack  = strength  (physical weapons scale off STR)
+   *   defense = vitality  (VIT drives durability / damage reduction)
+   *   speed   = agility/2 (AGI determines turn order)
+   *   maxHp   = base + vitality * 3 (VIT inflates HP pool)
    */
   refreshDerivedStats() {
     this.attack = this.strength;
-    this.defense = this.toughness;
+    this.defense = Math.round(this.vitality * 0.8);
     this.speed = Math.round(this.agility / 2);
   }
 
-  update(deltaTime) {
+  update(_deltaTime) {
     const lerpSpeed = 0.1;
     this.x += (this.targetX - this.x) * lerpSpeed;
     this.y += (this.targetY - this.y) * lerpSpeed;
