@@ -51,7 +51,7 @@ export class UIManager {
         <div class="hp-text">HP ${hero.hp} / ${hero.maxHp}</div>
         <div class="stat-detail">
           <div style="margin-bottom: 6px; font-weight: bold; border-bottom: 1px solid rgba(255,165,0,0.3); padding-bottom: 2px;">Attributes</div>
-          <div style="margin-bottom: 8px;">STR: ${hero.strength} | TOU: ${hero.toughness} | AGI: ${hero.agility} | INT: ${hero.intellect}</div>
+          <div style="margin-bottom: 8px;"><div style="margin-bottom: 8px;">STR: ${hero.strength} | VIT: ${hero.vitality} | AGI: ${hero.agility} | INT: ${hero.intellect} | AWR: ${hero.awareness} | TAL: ${hero.talent}</div>
           <div style="margin-bottom: 4px; font-weight: bold; border-bottom: 1px solid rgba(255,165,0,0.3); padding-bottom: 2px;">Current Skills</div>
           ${skillsHtml}
         </div>
