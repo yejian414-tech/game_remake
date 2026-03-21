@@ -140,63 +140,74 @@ export class InventoryUI {
             <div style="margin-bottom:10px;">${tabs}</div>
 
             <div style="padding:10px;border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;">
-                <div style="font-weight:700;margin-bottom:6px;">Character Stats</div>
-                <div style="opacity:.9;">HP ${hp} / ${maxHp}</div>
-                <div style="opacity:.9;">ATK ${hero.attack ?? 0} | DEF ${hero.defense ?? 0} | SPD ${hero.speed ?? 0}</div>
-                <div style="opacity:.75;font-size:12px;margin-top:4px;">
-                    STR ${hero.strength ?? 0} | TOU ${hero.toughness ?? 0} | AGI ${hero.agility ?? 0} | INT ${hero.intellect ?? 0}
-                </div>
-            </div>
-
-            <div style="padding:10px;border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;">
-                <div style="font-weight:700;margin-bottom:6px;">Equipment Slots</div>
-
-                <div class="equip-slot" data-slot="0"
-    style="opacity:.9;margin-bottom:6px;padding:10px;border:1px dashed rgba(255,255,255,0.35);border-radius:10px;min-height:44px;display:flex;align-items:center;justify-content:space-between;">
-    
-    
-    <span>Slot 0:${equip0
-            ? `<div class="equipped-item" data-slot="0" draggable="true"
-        style="flex:1;cursor:grab;">
-        <div style="display:flex;align-items:center;gap:8px;">
-  <canvas class="item-icon" data-icon="${equip0.icon}" width="32" height="32"></canvas>
-  <span>${equip0.name}</span>
+    <div style="font-weight:700;margin-bottom:6px;">Character Stats</div>
+    <div style="opacity:.9;">HP ${hp} / ${maxHp}</div>
+    <div style="opacity:.9;">ATK ${hero.attack ?? 0} | DEF ${hero.defense ?? 0} | SPD ${hero.speed ?? 0}</div>
+    <div style="opacity:.75;font-size:12px;margin-top:4px;">
+        STR ${hero.strength ?? 0} | TOU ${hero.toughness ?? 0} | AGI ${hero.agility ?? 0} | INT ${hero.intellect ?? 0}
+    </div>
 </div>
-      </div>`
+<div style="padding:10px;border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;">
+    <div style="font-weight:700;margin-bottom:6px;">Equipment Slots</div>
+
+    <div class="equip-slot" data-slot="0"
+        style="opacity:.9;margin-bottom:8px;padding:10px;border:1px dashed rgba(255,255,255,0.35);border-radius:10px;min-height:50px;display:flex;align-items:center;justify-content:space-between;">
+        
+        ${equip0
+            ? `
+            <div class="equipped-item" data-slot="0" draggable="true"
+                style="flex:1;cursor:grab;display:flex;align-items:center;gap:8px;">
+                <canvas class="item-icon" data-icon="${equip0.icon}" width="32" height="32"></canvas>
+                <span>${equip0.name}</span>
+            </div>
+            `
             : `<span style="flex:1;">Slot 0: Empty</span>`
         }
-    
-    ${equip0 ? `<button class="unequip-btn" data-slot="0"
-        style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.18);background:rgba(231,76,60,0.18);color:white;cursor:pointer;">
-        Unequip
-    </button>` : ""}
-</div>
 
-<div class="equip-slot" data-slot="1"
-    style="opacity:.9;padding:10px;border:1px dashed rgba(255,255,255,0.35);border-radius:10px;min-height:44px;display:flex;align-items:center;justify-content:space-between;">
-   
-    <span>Slot 1: ${equip1
-            ? `<div class="equipped-item" data-slot="1" draggable="true"
-        style="flex:1;cursor:grab;">
-        Slot 1: ${equip1.name}
-      </div>`
+        ${equip0
+            ? `<button class="unequip-btn" data-slot="0"
+                style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.18);background:rgba(231,76,60,0.18);color:white;cursor:pointer;">
+                Unequip
+              </button>`
+            : ""
+        }
+    </div>
+
+
+         
+    
+
+    <div class="equip-slot" data-slot="1"
+        style="opacity:.9;padding:10px;border:1px dashed rgba(255,255,255,0.35);border-radius:10px;min-height:50px;display:flex;align-items:center;justify-content:space-between;">
+        
+        ${equip1
+            ? `
+            <div class="equipped-item" data-slot="1" draggable="true"
+                style="flex:1;cursor:grab;display:flex;align-items:center;gap:8px;">
+                <canvas class="item-icon" data-icon="${equip1.icon}" width="32" height="32"></canvas>
+                <span>${equip1.name}</span>
+            </div>
+            `
             : `<span style="flex:1;">Slot 1: Empty</span>`
         }
-    
-    ${equip1 ? `<button class="unequip-btn" data-slot="1"
-        style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.18);background:rgba(231,76,60,0.18);color:white;cursor:pointer;">
-        Unequip
-    </button>` : ""}
+
+        ${equip1
+            ? `<button class="unequip-btn" data-slot="1"
+                style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.18);background:rgba(231,76,60,0.18);color:white;cursor:pointer;">
+                Unequip
+              </button>`
+            : ""
+        }
+    </div>
 </div>
 
-                <div style="opacity:.7;font-size:12px;margin-top:6px;">Drag an item into a slot to equip it.</div>
-            </div>
+          
 
-            <div style="font-weight:700;margin-bottom:8px;">Items</div>
+           <div style="font-weight:700;margin-bottom:8px;">Item Slots</div>
 
 <div class="inventory-dropzone"
     style="padding:10px;margin-bottom:10px;border:1px dashed rgba(255,255,255,0.35);border-radius:10px;opacity:.8;">
-    Drag equipped items here to unequip
+    Item Slots Area (drag equipped items here to unequip)
 </div>
 
 ${invList}
