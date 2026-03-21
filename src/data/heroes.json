@@ -1,8 +1,8 @@
 {
   "heroes": [
     {
-      "id": "warrior",
-      "name": "Warrior",
+      "id": "knight",
+      "name": "Knight",
       "hp": 140,
       "maxHp": 140,
       "desc": "High HP, melee expert, impenetrable defense",
@@ -19,8 +19,8 @@
       "equipSlots": [null, null]
     },
     {
-      "id": "mage",
-      "name": "Mage",
+      "id": "wizard",
+      "name": "Wizard",
       "hp": 80,
       "maxHp": 80,
       "desc": "Low HP, high magic damage, AOE spells",
@@ -37,8 +37,8 @@
       "equipSlots": [null, null]
     },
     {
-      "id": "ranger",
-      "name": "Ranger",
+      "id": "priest",
+      "name": "Priest",
       "hp": 100,
       "maxHp": 100,
       "desc": "Balanced, ranged expert, high awareness",
@@ -55,8 +55,8 @@
       "equipSlots": [null, null]
     },
     {
-      "id": "rogue",
-      "name": "Rogue",
+      "id": "ranger",
+      "name": "Ranger",
       "hp": 90,
       "maxHp": 90,
       "desc": "Highest speed, high crit rate, ambush specialist",
