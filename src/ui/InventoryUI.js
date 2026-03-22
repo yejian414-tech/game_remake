@@ -2,6 +2,7 @@
 
 export class InventoryUI {
     constructor() {
+        this.sharedStorage = { weapons: [], items: [] };
         this.heroes = [];
         this.activeIndex = 0;
         this.isOpen = false;
@@ -30,7 +31,7 @@ export class InventoryUI {
             "position:fixed",
             "right:18px",
             "top:72px",
-            "width:420px",
+            "width:780px",
             "max-height:70vh",
             "overflow:auto",
             "padding:14px",
@@ -105,38 +106,100 @@ export class InventoryUI {
         const equip1 = hero.equipSlots?.[1] ?? null;
         const inv = hero.inventory ?? [];
 
-        const invList = inv.length
-            ? inv.map((it, idx) => {
-                const rarity = it.rarity ?? "common";
-                return `
-                    <div class="inv-item" data-idx="${idx}" draggable="true"
-                        style="padding:10px;border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:8px;cursor:grab;">
-                        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
-                            <div>
-                                <div style="font-weight:700;display:flex;align-items:center;gap:8px;">
-    <canvas class="item-icon" data-icon="${it.icon}" width="32" height="32"></canvas>
-    <span>${it.name}</span>
-</div>
-                                <div style="opacity:.75;font-size:12px;">${it.desc ?? ""}</div>
-                                <div style="opacity:.7;font-size:12px;margin-top:4px;">Rarity: ${rarity} | Slot: ${it.slot ?? 0}</div>
-                            </div>
-                            <button class="inv-use" data-idx="${idx}"
-                                style="padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);
-                                background:rgba(46,204,113,0.18);color:white;cursor:pointer;">
-                                Use/Equip
-                            </button>
+// 武器槽
+        const weaponSlotsHTML = `
+    <div style="padding:10px;border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;">
+        <div style="font-weight:700;margin-bottom:8px;">⚔️ Weapon Slots</div>
+        ${(hero.weaponSlots ?? [null, null]).map((w, i) => `
+            <div class="weapon-slot" data-slot="${i}" data-accept="weapon"
+                style="padding:10px;border:1px dashed rgba(243,156,18,0.5);border-radius:10px;min-height:50px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+                ${w
+            ? `<div class="equipped-weapon" data-slot="${i}" draggable="true"
+                        title="${w.name} (double-click to unequip)"
+                        style="flex:1;display:flex;align-items:center;gap:8px;cursor:grab;">
+                        <canvas class="item-icon" data-icon="sword" width="32" height="32" style="pointer-events:none;"></canvas>
+                        <div style="pointer-events:none;">
+                            <div style="font-weight:700;font-size:13px;">${w.name}</div>
+                            <div style="opacity:.6;font-size:11px;">${w.rarity ?? ''} — double-click to unequip</div>
                         </div>
-                    </div>
-                `;
-            }).join("")
-            : `<div style="opacity:.7;">Inventory is empty</div>`;
+                    </div>`
+            : `<span style="opacity:.4;font-size:13px;">⚔️ Weapon Slots ${i + 1}：空</span>`
+        }
+            </div>
+        `).join('')}
+    </div>
+`;
+
+// 道具槽（无限）
+        const equippedItems = (hero.equipSlots ?? []).filter(it => it != null);
+        const itemSlotsHTML = `
+    <div style="padding:10px;border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;">
+        <div style="font-weight:700;margin-bottom:8px;">🧪  Item Slots</div>
+        ${equippedItems.length === 0
+            ? `<div class="item-slot" data-accept="item"
+                style="padding:10px;border:1px dashed rgba(52,211,153,0.4);border-radius:10px;min-height:50px;display:flex;align-items:center;justify-content:center;opacity:.4;">
+                Drag item here to equip</div>`
+            : `<div style="display:flex;flex-wrap:wrap;gap:8px;">
+    ${equippedItems.filter(it => it != null).map((it, i) => `
+       <div class="equipped-item" data-slot="${i}" draggable="true"
+    title="${it.name}"
+    style="width:48px;height:48px;border:1px dashed rgba(52,211,153,0.5);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:grab;position:relative;font-size:10px;text-align:center;gap:2px;">
+    <span style="font-size:20px;pointer-events:none;">${_getItemEmoji(it.icon)}</span>
+    <span style="opacity:.7;pointer-events:none;overflow:hidden;width:44px;white-space:nowrap;text-overflow:ellipsis;">${it.name}</span>
+</div>
+    `).join('')}
+</div>`
+        }
+       
+        <div class="item-slot" data-accept="item"
+            style="padding:10px;border:1px dashed rgba(52,211,153,0.3);border-radius:10px;min-height:50px;display:flex;align-items:center;justify-content:center;opacity:.4;margin-top:6px;">
+            + Drag item here
+        </div>
+    </div>
+`;
 
         this.panel.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <div style="font-weight:700;font-size:16px;">🎒 Inventory</div>
-                <button id="inv-close" style="background:transparent;border:none;color:#aaa;cursor:pointer;">✕</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-weight:700;font-size:16px;">🎒 Inventory</div>
+        <button id="inv-close" style="background:transparent;border:none;color:#aaa;cursor:pointer;">✕</button>
+    </div>
+
+    <div style="display:flex;gap:12px;">
+
+        <!-- 左侧共用存放区 -->
+        <div id="shared-storage" style="width:220px;flex-shrink:0;border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:10px;overflow-y:auto;max-height:60vh;">
+            
+            <div style="font-weight:700;margin-bottom:8px;">⚔️ Weapons</div>
+            <div id="storage-weapons" style="min-height:40px;margin-bottom:12px;">
+                ${this.sharedStorage.weapons.length === 0
+            ? `<div style="opacity:.4;font-size:12px;">No weapons</div>`
+            : this.sharedStorage.weapons.map((w, i) => `
+                        <div class="storage-item" data-stype="weapon" data-sidx="${i}" draggable="true"
+                            style="padding:8px;border:1px solid rgba(243,156,18,0.4);border-radius:8px;margin-bottom:6px;cursor:grab;font-size:13px;">
+                            <div style="font-weight:700;">${w.name}</div>
+                            <div style="opacity:.6;font-size:11px;">${w.rarity ?? ''}</div>
+                        </div>
+                    `).join('')
+        }
             </div>
 
+            <div style="font-weight:700;margin-bottom:8px;">🧪 Items</div>
+            <div id="storage-items" style="min-height:40px;">
+                ${this.sharedStorage.items.length === 0
+            ? `<div style="opacity:.4;font-size:12px;">No items</div>`
+            : this.sharedStorage.items.map((it, i) => `
+                        <div class="storage-item" data-stype="item" data-sidx="${i}" draggable="true"
+                            style="padding:8px;border:1px solid rgba(52,211,153,0.4);border-radius:8px;margin-bottom:6px;cursor:grab;font-size:13px;">
+                            <div style="font-weight:700;">${it.name}</div>
+                            <div style="opacity:.6;font-size:11px;">${it.rarity ?? ''}</div>
+                        </div>
+                    `).join('')
+        }
+            </div>
+        </div>
+
+        <!-- 右侧角色区 -->
+        <div style="flex:1;">
             <div style="margin-bottom:10px;">${tabs}</div>
 
             <div style="padding:10px;border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;">
@@ -147,74 +210,18 @@ export class InventoryUI {
         STR ${hero.strength ?? 0} | TOU ${hero.toughness ?? 0} | AGI ${hero.agility ?? 0} | INT ${hero.intellect ?? 0}
     </div>
 </div>
-<div style="padding:10px;border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;">
-    <div style="font-weight:700;margin-bottom:6px;">Equipment Slots</div>
 
-    <div class="equip-slot" data-slot="0"
-        style="opacity:.9;margin-bottom:8px;padding:10px;border:1px dashed rgba(255,255,255,0.35);border-radius:10px;min-height:50px;display:flex;align-items:center;justify-content:space-between;">
-        
-        ${equip0
-            ? `
-            <div class="equipped-item" data-slot="0" draggable="true"
-                style="flex:1;cursor:grab;display:flex;align-items:center;gap:8px;">
-                <canvas class="item-icon" data-icon="${equip0.icon}" width="32" height="32"></canvas>
-                <span>${equip0.name}</span>
-            </div>
-            `
-            : `<span style="flex:1;">Slot 0: Empty</span>`
-        }
 
-        ${equip0
-            ? `<button class="unequip-btn" data-slot="0"
-                style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.18);background:rgba(231,76,60,0.18);color:white;cursor:pointer;">
-                Unequip
-              </button>`
-            : ""
-        }
+${weaponSlotsHTML}
+${itemSlotsHTML}
+       </div>
     </div>
-
-
-         
-    
-
-    <div class="equip-slot" data-slot="1"
-        style="opacity:.9;padding:10px;border:1px dashed rgba(255,255,255,0.35);border-radius:10px;min-height:50px;display:flex;align-items:center;justify-content:space-between;">
-        
-        ${equip1
-            ? `
-            <div class="equipped-item" data-slot="1" draggable="true"
-                style="flex:1;cursor:grab;display:flex;align-items:center;gap:8px;">
-                <canvas class="item-icon" data-icon="${equip1.icon}" width="32" height="32"></canvas>
-                <span>${equip1.name}</span>
-            </div>
-            `
-            : `<span style="flex:1;">Slot 1: Empty</span>`
-        }
-
-        ${equip1
-            ? `<button class="unequip-btn" data-slot="1"
-                style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.18);background:rgba(231,76,60,0.18);color:white;cursor:pointer;">
-                Unequip
-              </button>`
-            : ""
-        }
-    </div>
-</div>
-
-          
-
-           <div style="font-weight:700;margin-bottom:8px;">Item Slots</div>
-
-<div class="inventory-dropzone"
-    style="padding:10px;margin-bottom:10px;border:1px dashed rgba(255,255,255,0.35);border-radius:10px;opacity:.8;">
-    Item Slots Area (drag equipped items here to unequip)
-</div>
-
-${invList}
         `;
 
+        // 关闭按钮
         this.panel.querySelector("#inv-close")?.addEventListener("click", () => this.close());
 
+// Tab 切换
         this.panel.querySelectorAll(".inv-tab").forEach((b) => {
             b.addEventListener("click", () => {
                 this.activeIndex = Number(b.getAttribute("data-i") ?? 0);
@@ -222,121 +229,332 @@ ${invList}
             });
         });
 
-        this.panel.querySelectorAll(".inv-use").forEach((b) => {
-            b.addEventListener("click", () => {
-                const idx = Number(b.getAttribute("data-idx"));
-                const item = hero.inventory?.[idx];
-                const slotIndex = item?.slot ?? 0;
-                this._equipItem(hero, idx, slotIndex);
-            });
-        });
-
-        this.panel.querySelectorAll(".unequip-btn").forEach((b) => {
-            b.addEventListener("click", () => {
-                const slotIndex = Number(b.getAttribute("data-slot"));
-                this._unequipItem(hero, slotIndex);
-            });
-        });
-
-        this.panel.querySelectorAll(".inv-item").forEach((el) => {
+// 左侧存放区物品 → 拖拽开始
+        // 左侧存放区物品 → 拖拽开始 + 双击装备
+        this.panel.querySelectorAll(".storage-item").forEach((el) => {
             el.addEventListener("dragstart", (e) => {
-                e.dataTransfer.setData("itemIndex", el.dataset.idx);
+                e.dataTransfer.setData("dragFrom", "storage");
+                e.dataTransfer.setData("stype", el.dataset.stype);
+                e.dataTransfer.setData("sidx", el.dataset.sidx);
+            });
+            el.addEventListener("dblclick", () => {
+                const stype = el.dataset.stype;
+                const sidx = Number(el.dataset.sidx);
+                if (stype === "weapon") {
+                    const weapon = this.sharedStorage.weapons[sidx];
+                    if (!weapon) return;
+                    // 装到第一个空武器槽
+                    const emptySlot = (hero.weaponSlots ?? [null, null]).findIndex(w => w === null);
+                    if (emptySlot === -1) {
+                        this._showSlotError("No empty weapon slots!");
+                        return;
+                    }
+                    this.sharedStorage.weapons.splice(sidx, 1);
+                    hero.weaponSlots[emptySlot] = weapon;
+                    if (typeof hero.refreshDerivedStats === "function") hero.refreshDerivedStats();
+                } else {
+                    const item = this.sharedStorage.items[sidx];
+                    if (!item) return;
+                    this.sharedStorage.items.splice(sidx, 1);
+                    hero.equipSlots = (hero.equipSlots ?? []).filter(i => i != null);
+                    hero.equipSlots.push(item);
+                    if (typeof hero.refreshDerivedStats === "function") hero.refreshDerivedStats();
+                }
+                this.render();
+            });
+        });
+        // 已装备武器 → 拖拽开始 + 双击卸下
+        this.panel.querySelectorAll(".equipped-weapon").forEach((el) => {
+            el.addEventListener("dragstart", (e) => {
+                e.dataTransfer.setData("dragFrom", "equipped-weapon");
+                e.dataTransfer.setData("slotIndex", el.dataset.slot);
+            });
+            el.addEventListener("dblclick", () => {
+                const slotIndex = Number(el.dataset.slot);
+                const weapon = hero.weaponSlots?.[slotIndex];
+                if (!weapon) return;
+                hero.weaponSlots[slotIndex] = null;
+                this.sharedStorage.weapons.push(weapon);
+                if (typeof hero.refreshDerivedStats === "function") hero.refreshDerivedStats();
+                this.render();
             });
         });
 
-        this.panel.querySelectorAll(".equip-slot").forEach((slotEl) => {
+// 已装备道具 → 拖拽开始 + 双击卸下
+        this.panel.querySelectorAll(".equipped-item").forEach((el) => {
+            console.log("equipped-item found:", el.dataset.slot);
+            el.addEventListener("dragstart", (e) => {
+                e.stopPropagation();
+                e.dataTransfer.setData("dragFrom", "equipped-item");
+                e.dataTransfer.setData("slotIndex", el.dataset.slot);
+            });
+            el.addEventListener("dblclick", () => {
+                console.log("dblclick fired, slot:", el.dataset.slot, "item:", hero.equipSlots?.[Number(el.dataset.slot)]);
+                const slotIndex = Number(el.dataset.slot);
+                const item = hero.equipSlots?.[slotIndex];
+                if (!item) return;
+                hero.equipSlots.splice(slotIndex, 1);
+                this.sharedStorage.items.push(item);
+                if (typeof hero.refreshDerivedStats === "function") hero.refreshDerivedStats();
+                this.render();
+            });
+        });
+
+// 右侧武器槽 → 接受拖拽
+        this.panel.querySelectorAll(".weapon-slot").forEach((slotEl) => {
             slotEl.addEventListener("dragover", (e) => {
                 e.preventDefault();
                 slotEl.style.background = "rgba(243,156,18,0.12)";
             });
-
             slotEl.addEventListener("dragleave", () => {
                 slotEl.style.background = "transparent";
             });
-
             slotEl.addEventListener("drop", (e) => {
                 e.preventDefault();
                 slotEl.style.background = "transparent";
 
-                const itemIndex = Number(e.dataTransfer.getData("itemIndex"));
+                const dragFrom = e.dataTransfer.getData("dragFrom");
+                const stype = e.dataTransfer.getData("stype");
+                const sidx = Number(e.dataTransfer.getData("sidx"));
                 const slotIndex = Number(slotEl.dataset.slot);
 
-                this._equipItem(hero, itemIndex, slotIndex);
+                if (dragFrom !== "storage" || stype !== "weapon") {
+                    this._showSlotError("⚔️ Weapon slots only!");
+                    return;
+                }
+
+                const weapon = this.sharedStorage.weapons[sidx];
+                if (!weapon) return;
+
+                // 武器槽已有武器则换回存放区
+                const prev = hero.weaponSlots?.[slotIndex];
+                if (prev) this.sharedStorage.weapons.push(prev);
+
+                this.sharedStorage.weapons.splice(sidx, 1);
+                hero.weaponSlots = hero.weaponSlots ?? [null, null];
+                hero.weaponSlots[slotIndex] = weapon;
+                if (typeof hero.refreshDerivedStats === "function") hero.refreshDerivedStats();
+
+                this.render();
             });
         });
-        // ========================
-// 装备 → 拖回背包（卸下）
-// ========================
-        this.panel.querySelectorAll(".equipped-item").forEach((el) => {
-            el.addEventListener("dragstart", (e) => {
-                e.dataTransfer.setData("dragType", "equipped");
-                e.dataTransfer.setData("slotIndex", el.dataset.slot);
+
+// 右侧道具槽 → 接受拖拽
+        this.panel.querySelectorAll(".item-slot").forEach((slotEl) => {
+            slotEl.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                slotEl.style.background = "rgba(52,211,153,0.12)";
+            });
+            slotEl.addEventListener("dragleave", () => {
+                slotEl.style.background = "transparent";
+            });
+            slotEl.addEventListener("drop", (e) => {
+                e.preventDefault();
+                slotEl.style.background = "transparent";
+
+                const dragFrom = e.dataTransfer.getData("dragFrom");
+                const stype = e.dataTransfer.getData("stype");
+                const sidx = Number(e.dataTransfer.getData("sidx"));
+
+                if (dragFrom !== "storage" || stype !== "item") {
+                    this._showSlotError("🧪 Item slots only！");
+                    return;
+                }
+
+                const item = this.sharedStorage.items[sidx];
+                if (!item) return;
+
+                this.sharedStorage.items.splice(sidx, 1);
+                hero.equipSlots = (hero.equipSlots ?? []).filter(i => i != null);
+                hero.equipSlots.push(item);
+                if (typeof hero.refreshDerivedStats === "function") hero.refreshDerivedStats();
+
+                this.render();
             });
         });
 
-        const inventoryDropzone = this.panel.querySelector(".inventory-dropzone");
-        if (inventoryDropzone) {
-            inventoryDropzone.addEventListener("dragover", (e) => {
-                e.preventDefault();
-                inventoryDropzone.style.background = "rgba(52,152,219,0.12)";
+
+// 右侧道具卸下按钮
+        this.panel.querySelectorAll(".unequip-item-btn").forEach((b) => {
+            b.addEventListener("click", () => {
+                const slotIndex = Number(b.getAttribute("data-slot"));
+                const item = hero.equipSlots?.[slotIndex];
+                if (!item) return;
+                hero.equipSlots.splice(slotIndex, 1);
+                this.sharedStorage.items.push(item);
+                if (typeof hero.refreshDerivedStats === "function") hero.refreshDerivedStats();
+                this.render();
             });
+        });
 
-            inventoryDropzone.addEventListener("dragleave", () => {
-                inventoryDropzone.style.background = "transparent";
-            });
-
-            inventoryDropzone.addEventListener("drop", (e) => {
-                e.preventDefault();
-                inventoryDropzone.style.background = "transparent";
-
-                const dragType = e.dataTransfer.getData("dragType");
-                if (dragType !== "equipped") return;
-
-                const slotIndex = Number(e.dataTransfer.getData("slotIndex"));
-                this._unequipItem(hero, slotIndex);
-            });
-        }
+// 图标渲染
         this.panel.querySelectorAll(".item-icon").forEach((cvs) => {
-            const type = cvs.dataset.icon;
-            drawItemIconMini(cvs, type);
+            drawItemIconMini(cvs, cvs.dataset.icon);
         });
-    }
+        // Tooltip 绑定
+        this.panel.querySelectorAll(".storage-item").forEach((el) => {
+            const stype = el.dataset.stype;
+            const sidx = Number(el.dataset.sidx);
+            const item = stype === 'weapon'
+                ? this.sharedStorage.weapons[sidx]
+                : this.sharedStorage.items[sidx];
+            if (!item) return;
+            el.addEventListener("mouseenter", (e) => this._showTooltip(e, item));
+            el.addEventListener("mousemove", (e) => this._moveTooltip(e));
+            el.addEventListener("mouseleave", () => this._hideTooltip());
+        });
 
-    _equipItem(hero, itemIndex, slotIndex) {
-        if (!hero || !hero.inventory) return;
-
-        const item = hero.inventory[itemIndex];
-        if (!item) return;
-
-        hero.inventory.splice(itemIndex, 1);
-
-        if (typeof hero.equip === "function") {
-            hero.equip(item, slotIndex);
-        } else {
-            hero.equipSlots = hero.equipSlots ?? [null, null];
-            hero.equipSlots[slotIndex] = item;
-        }
-
-        this.render();
-    }
-    _unequipItem(hero, slotIndex) {
-        if (!hero) return;
-
-        if (typeof hero.unequip === "function") {
-            hero.unequip(slotIndex);
-        } else {
+        this.panel.querySelectorAll(".equipped-item").forEach((el) => {
+            const slotIndex = Number(el.dataset.slot);
             const item = hero.equipSlots?.[slotIndex];
             if (!item) return;
+            el.addEventListener("mouseenter", (e) => this._showTooltip(e, item));
+            el.addEventListener("mousemove", (e) => this._moveTooltip(e));
+            el.addEventListener("mouseleave", () => this._hideTooltip());
+        });
 
-            hero.equipSlots[slotIndex] = null;
-            hero.inventory = hero.inventory ?? [];
-            hero.inventory.push(item);
+        this.panel.querySelectorAll(".equipped-weapon").forEach((el) => {
+            const slotIndex = Number(el.dataset.slot);
+            const weapon = hero.weaponSlots?.[slotIndex];
+            if (!weapon) return;
+            el.addEventListener("mouseenter", (e) => this._showTooltip(e, weapon));
+            el.addEventListener("mousemove", (e) => this._moveTooltip(e));
+            el.addEventListener("mouseleave", () => this._hideTooltip());
+        });
+        // 左侧存放区 → 接受从右侧拖回的装备
+        const sharedStorageEl = this.panel.querySelector("#shared-storage");
+        if (sharedStorageEl) {
+            sharedStorageEl.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                sharedStorageEl.style.background = "rgba(255,255,255,0.05)";
+            });
+            sharedStorageEl.addEventListener("dragleave", () => {
+                sharedStorageEl.style.background = "transparent";
+            });
+            sharedStorageEl.addEventListener("drop", (e) => {
+                e.preventDefault();
+                sharedStorageEl.style.background = "transparent";
+
+                const dragFrom = e.dataTransfer.getData("dragFrom");
+                const slotIndex = Number(e.dataTransfer.getData("slotIndex"));
+
+                if (dragFrom === "equipped-weapon") {
+                    const weapon = hero.weaponSlots?.[slotIndex];
+                    if (!weapon) return;
+                    hero.weaponSlots[slotIndex] = null;
+                    this.sharedStorage.weapons.push(weapon);
+                    if (typeof hero.refreshDerivedStats === "function") hero.refreshDerivedStats();
+                    this.render();
+                } else if (dragFrom === "equipped-item") {
+                    const item = hero.equipSlots?.[slotIndex];
+                    if (!item) return;
+                    hero.equipSlots.splice(slotIndex, 1);
+                    this.sharedStorage.items.push(item);
+                    if (typeof hero.refreshDerivedStats === "function") hero.refreshDerivedStats();
+                    this.render();
+                }
+            });
         }
-
-        this.render();
     }
 
+
+
+
+    _showSlotError(msg) {
+        const err = document.createElement('div');
+        err.textContent = msg;
+        err.style.cssText = [
+            'position:fixed',
+            'bottom:80px',
+            'left:50%',
+            'transform:translateX(-50%)',
+            'background:rgba(231,76,60,0.92)',
+            'color:white',
+            'padding:8px 20px',
+            'border-radius:10px',
+            'font-weight:bold',
+            'z-index:9999',
+            'pointer-events:none',
+        ].join(';');
+        document.body.appendChild(err);
+        setTimeout(() => err.remove(), 1500);
+    }
+    _initTooltip() {
+        const tooltip = document.createElement('div');
+        tooltip.id = 'inv-tooltip';
+        tooltip.style.cssText = [
+            'position:fixed',
+            'background:rgba(10,10,25,0.95)',
+            'border:1px solid rgba(255,255,255,0.18)',
+            'border-radius:10px',
+            'padding:10px 14px',
+            'color:white',
+            'font-size:12px',
+            'z-index:9999',
+            'pointer-events:none',
+            'display:none',
+            'max-width:200px',
+            'font-family:sans-serif',
+            'box-shadow:0 4px 12px rgba(0,0,0,0.4)',
+        ].join(';');
+        document.body.appendChild(tooltip);
+        this._tooltip = tooltip;
+    }
+
+    _showTooltip(e, item) {
+        if (!this._tooltip) this._initTooltip();
+        const rarityColors = { common: '#aaa', rare: '#3b82f6', epic: '#a855f7', uncommon: '#22c55e' };
+        const color = rarityColors[item.rarity] ?? '#aaa';
+        this._tooltip.innerHTML = `
+        <div style="font-weight:700;margin-bottom:4px;">${item.name}</div>
+        <div style="color:${color};font-size:11px;margin-bottom:6px;">${item.rarity ?? 'common'}</div>
+        <div style="opacity:.8;line-height:1.4;">${item.desc ?? ''}</div>
+        ${item.statBonus && Object.keys(item.statBonus).length > 0
+            ? `<div style="margin-top:6px;opacity:.7;font-size:11px;">${Object.entries(item.statBonus).map(([k,v]) => `+${v} ${k}`).join(' | ')}</div>`
+            : ''
+        }
+    `;
+        this._tooltip.style.display = 'block';
+        this._moveTooltip(e);
+    }
+
+    _moveTooltip(e) {
+        if (!this._tooltip) return;
+        this._tooltip.style.left = (e.clientX + 14) + 'px';
+        this._tooltip.style.top = (e.clientY - 10) + 'px';
+    }
+
+    _hideTooltip() {
+        if (this._tooltip) this._tooltip.style.display = 'none';
+    }
+// 外部调用：把物品加入共用存放区
+    addToStorage(item) {
+        if (!item) return;
+        const isWeapon = Array.isArray(item.skills) && item.skills.length > 0;
+        if (isWeapon) {
+            this.sharedStorage.weapons.push(item);
+        } else {
+            this.sharedStorage.items.push(item);
+        }
+        if (this.isOpen) this.render();
+    }
+
+// 外部调用：获取共用存放区
+    getStorage() {
+        return this.sharedStorage;
+    }
 }
+function _getItemEmoji(iconType) {
+    switch(iconType) {
+        case 'sword':   return '⚔️';
+        case 'shield':  return '🛡️';
+        case 'potion':  return '🧪';
+        case 'boots':   return '👟';
+        case 'clover':  return '🍀';
+        default:        return '📦';
+    }
+}
+
 function drawItemIconMini(canvas, iconType) {
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, 32, 32);

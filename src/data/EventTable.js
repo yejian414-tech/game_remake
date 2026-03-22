@@ -285,9 +285,9 @@ export class EventTable {
               const hero = gameController.selectedHeroes?.[heroIndex];
               if (hero) {
                 if (action === 'put') {
-                  hero.inventory.push(loot);
+                  gameController.ui.inventoryUI.addToStorage(loot);
                 } else {
-                  hero.equip?.(loot, loot.slot ?? 0);
+                  gameController.ui.inventoryUI.addToStorage(loot);
                 }
                 gameController.ui.updatePartyStatus(gameController.selectedHeroes);
               }
