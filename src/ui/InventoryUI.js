@@ -102,9 +102,7 @@ export class InventoryUI {
         const hero = heroes[this.activeIndex];
         const hp = hero.hp ?? 0;
         const maxHp = hero.maxHp ?? hero.hp ?? 0;
-        const equip0 = hero.equipSlots?.[0] ?? null;
-        const equip1 = hero.equipSlots?.[1] ?? null;
-        const inv = hero.inventory ?? [];
+
 
 // 武器槽
         const weaponSlotsHTML = `
